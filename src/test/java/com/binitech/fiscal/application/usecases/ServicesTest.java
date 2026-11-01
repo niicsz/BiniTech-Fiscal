@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.binitech.fiscal.adapters.outbound.crypto.AesGcmSecretCipher;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase.IssuerCommand;
+import com.binitech.fiscal.application.ports.outbound.FiscalPreferenceRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.IssuerRepositoryPort;
 import com.binitech.fiscal.application.usecases.NfceProcessorTest.FakeSefaz;
 import com.binitech.fiscal.application.usecases.NfceProcessorTest.InMemoryDocuments;
@@ -13,6 +14,7 @@ import com.binitech.fiscal.application.usecases.NfceProcessorTest.PlainCipher;
 import com.binitech.fiscal.domain.Address;
 import com.binitech.fiscal.domain.CertificateInfo;
 import com.binitech.fiscal.domain.FiscalDocument;
+import com.binitech.fiscal.domain.FiscalPreference;
 import com.binitech.fiscal.domain.FiscalStatus;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.SaleSnapshot;
@@ -40,6 +42,20 @@ class ServicesTest {
 
   private final MutableClock clock = new MutableClock(Instant.parse("2026-10-31T15:00:00Z"));
   private final Map<String, Issuer> issuerStore = new HashMap<>();
+  private final Map<String, FiscalPreference> preferenceStore = new HashMap<>();
+  private final FiscalPreferenceRepositoryPort preferences =
+      new FiscalPreferenceRepositoryPort() {
+        @Override
+        public FiscalPreference save(FiscalPreference preference) {
+          preferenceStore.put(preference.tenantId(), preference);
+          return preference;
+        }
+
+        @Override
+        public Optional<FiscalPreference> findByTenantId(String tenantId) {
+          return Optional.ofNullable(preferenceStore.get(tenantId));
+        }
+      };
   private final IssuerRepositoryPort issuers =
       new IssuerRepositoryPort() {
         @Override
@@ -89,6 +105,7 @@ class ServicesTest {
     issuer.setAutoIssue(autoIssue);
     issuer.setCertificate(new StoredCertificate("pfx", "pwd", "LOJA", LocalDate.of(2027, 1, 1)));
     issuers.save(issuer);
+    preferences.save(new FiscalPreference("t1", true, Instant.now(), "u1"));
     return issuer;
   }
 
@@ -211,6 +228,7 @@ class ServicesTest {
           new NfceService(
               documents,
               issuers,
+              preferences,
               sefaz,
               (xml, url) -> new byte[] {1},
               new PlainCipher(),
@@ -255,6 +273,21 @@ class ServicesTest {
     }
 
     @Test
+    @DisplayName("Loja com NFC-e desativada ignora a venda e recusa emissão manual")
+    void disabledStoreIgnoresSales() {
+      readyIssuer(true);
+      preferences.save(new FiscalPreference("t1", false, Instant.now(), "u1"));
+
+      service.registerSale(sale("s1", null));
+
+      assertThat(documents.findByTenantIdAndSaleId("t1", "s1")).isEmpty();
+      assertThat(processed).isEmpty();
+      assertThatThrownBy(() -> service.requestIssue("t1", "s1", null))
+          .isInstanceOf(BusinessException.class)
+          .hasMessageContaining("desativada");
+    }
+
+    @Test
     @DisplayName("Loja sem emitente configurado ignora a venda")
     void noIssuerIgnores() {
       service.registerSale(sale("s1", null));
@@ -287,6 +320,7 @@ class ServicesTest {
           new NfceService(
               documents,
               issuers,
+              preferences,
               cancelling,
               (xml, url) -> new byte[0],
               new PlainCipher(),

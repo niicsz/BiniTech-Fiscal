@@ -196,4 +196,21 @@ class MongoRepositoriesTest {
     assertThat(loaded.getSerie()).isEqualTo(2);
     assertThat(mongo.getCollection(MongoIssuerRepository.COLLECTION).countDocuments()).isEqualTo(1);
   }
+
+  @Test
+  @DisplayName("Preferência de NFC-e é uma por loja e pode ser trocada")
+  void preferenceRoundTrip() {
+    MongoFiscalPreferenceRepository preferences = new MongoFiscalPreferenceRepository(mongo);
+    preferences.ensureIndexes();
+    assertThat(preferences.findByTenantId("t1")).isEmpty();
+
+    preferences.save(new com.binitech.fiscal.domain.FiscalPreference("t1", true, now, "u1"));
+    preferences.save(new com.binitech.fiscal.domain.FiscalPreference("t1", false, now, "u2"));
+
+    var loaded = preferences.findByTenantId("t1").orElseThrow();
+    assertThat(loaded.nfceEnabled()).isFalse();
+    assertThat(loaded.decidedBy()).isEqualTo("u2");
+    assertThat(mongo.getCollection(MongoFiscalPreferenceRepository.COLLECTION).countDocuments())
+        .isEqualTo(1);
+  }
 }

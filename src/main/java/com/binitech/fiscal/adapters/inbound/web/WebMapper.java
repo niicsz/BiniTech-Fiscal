@@ -1,6 +1,7 @@
 package com.binitech.fiscal.adapters.inbound.web;
 
 import com.binitech.fiscal.adapters.inbound.web.generated.model.AddressDTO;
+import com.binitech.fiscal.adapters.inbound.web.generated.model.FiscalPreferencesDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.IssuerDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.IssuerRequestDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.NfceDTO;
@@ -10,6 +11,7 @@ import com.binitech.fiscal.adapters.inbound.web.generated.model.SefazStatusDTO;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase.IssuerCommand;
 import com.binitech.fiscal.domain.Address;
 import com.binitech.fiscal.domain.FiscalDocument;
+import com.binitech.fiscal.domain.FiscalPreference;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.SefazOutcome;
 import com.binitech.fiscal.domain.TaxRegime;
@@ -99,6 +101,16 @@ public final class WebMapper {
         address.getCidade(),
         address.getUf(),
         address.getCep());
+  }
+
+  public static FiscalPreferencesDTO preferences(FiscalPreference preference) {
+    if (preference == null) {
+      return new FiscalPreferencesDTO().decided(false).nfceEnabled(false);
+    }
+    return new FiscalPreferencesDTO()
+        .decided(true)
+        .nfceEnabled(preference.nfceEnabled())
+        .decidedAt(offset(preference.decidedAt()));
   }
 
   public static SefazStatusDTO sefazStatus(SefazOutcome outcome) {

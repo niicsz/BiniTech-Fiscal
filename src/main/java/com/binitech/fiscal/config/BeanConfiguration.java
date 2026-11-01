@@ -6,22 +6,26 @@ import com.binitech.fiscal.adapters.outbound.crypto.AesGcmSecretCipher;
 import com.binitech.fiscal.adapters.outbound.http.HttpAuthenticationAdapter;
 import com.binitech.fiscal.adapters.outbound.http.ViaCepAddressAdapter;
 import com.binitech.fiscal.adapters.outbound.persistence.MongoFiscalDocumentRepository;
+import com.binitech.fiscal.adapters.outbound.persistence.MongoFiscalPreferenceRepository;
 import com.binitech.fiscal.adapters.outbound.persistence.MongoIssuerRepository;
 import com.binitech.fiscal.adapters.outbound.persistence.MongoNumberSequence;
 import com.binitech.fiscal.adapters.outbound.sefaz.JasperDanfeAdapter;
 import com.binitech.fiscal.adapters.outbound.sefaz.JavaNfeSefazAdapter;
 import com.binitech.fiscal.adapters.outbound.sefaz.NfceXmlBuilder;
 import com.binitech.fiscal.adapters.outbound.sefaz.NfceXmlBuilder.ResponsibleTechnician;
+import com.binitech.fiscal.application.ports.inbound.FiscalPreferenceUseCase;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase;
 import com.binitech.fiscal.application.ports.inbound.NfceUseCase;
 import com.binitech.fiscal.application.ports.outbound.AddressLookupPort;
 import com.binitech.fiscal.application.ports.outbound.AuthenticationPort;
 import com.binitech.fiscal.application.ports.outbound.DanfePort;
 import com.binitech.fiscal.application.ports.outbound.FiscalDocumentRepositoryPort;
+import com.binitech.fiscal.application.ports.outbound.FiscalPreferenceRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.IssuerRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.NumberSequencePort;
 import com.binitech.fiscal.application.ports.outbound.SecretCipherPort;
 import com.binitech.fiscal.application.ports.outbound.SefazPort;
+import com.binitech.fiscal.application.usecases.FiscalPreferenceService;
 import com.binitech.fiscal.application.usecases.IssuerService;
 import com.binitech.fiscal.application.usecases.NfceProcessor;
 import com.binitech.fiscal.application.usecases.NfceService;
@@ -56,6 +60,19 @@ public class BeanConfiguration {
     MongoIssuerRepository repository = new MongoIssuerRepository(mongo);
     repository.ensureIndexes();
     return repository;
+  }
+
+  @Bean
+  MongoFiscalPreferenceRepository fiscalPreferenceRepository(MongoTemplate mongo) {
+    MongoFiscalPreferenceRepository repository = new MongoFiscalPreferenceRepository(mongo);
+    repository.ensureIndexes();
+    return repository;
+  }
+
+  @Bean
+  FiscalPreferenceUseCase fiscalPreferenceUseCase(
+      FiscalPreferenceRepositoryPort preferences, Clock clock) {
+    return new FiscalPreferenceService(preferences, clock);
   }
 
   @Bean
@@ -107,6 +124,7 @@ public class BeanConfiguration {
   NfceUseCase nfceUseCase(
       FiscalDocumentRepositoryPort documents,
       IssuerRepositoryPort issuers,
+      FiscalPreferenceRepositoryPort preferences,
       SefazPort sefaz,
       DanfePort danfe,
       SecretCipherPort cipher,
@@ -114,7 +132,7 @@ public class BeanConfiguration {
       ExecutorService fiscalExecutor,
       Clock clock) {
     return new NfceService(
-        documents, issuers, sefaz, danfe, cipher, processor, fiscalExecutor, clock);
+        documents, issuers, preferences, sefaz, danfe, cipher, processor, fiscalExecutor, clock);
   }
 
   @Bean
