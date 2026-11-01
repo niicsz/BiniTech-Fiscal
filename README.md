@@ -49,6 +49,8 @@ Frontend ──(REST /api/fiscal/**)──▶ emitir / consultar / cancelar   �
 
 ## API
 
+API-first, como o PDV e o Product-Import: o contrato fica em `src/main/resources/openapi/swagger.yaml` e o `openapi-generator-maven-plugin` gera as interfaces (`IssuerApi`, `NfceApi`) e os DTOs que os controllers implementam. A documentação interativa fica em `/swagger-ui.html`.
+
 | Método | Rota | Descrição |
 |---|---|---|
 | GET/PUT | `/api/fiscal/issuer` | Dados fiscais da loja |
@@ -83,4 +85,5 @@ mvn verify
 - **NfceSigningTest:** gera um certificado A1 de teste e monta, **assina e valida contra os XSDs oficiais** uma NFC-e normal e uma em contingência offline, sem rede.
 - **DanfeRenderingTest:** gera o cupom em PDF a partir do `nfeProc`.
 - **NfceProcessorTest:** máquina de estados (autorização, timeout ambíguo, consulta antes de reenviar, contingência, duplicidade, rejeição 704, inutilização).
+- **FiscalApiContractTest:** sobe a aplicação com MockMvc e confere o contrato (status, campos do JSON, permissões, 401/403/415/422 e PDF).
 - **MongoRepositoriesTest:** Mongo embarcado, reserva concorrente exclusiva, trava otimista, numeração sem repetição com 100 chamadas paralelas.
