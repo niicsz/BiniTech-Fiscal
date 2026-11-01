@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.binitech.fiscal.adapters.outbound.crypto.AesGcmSecretCipher;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase.IssuerCommand;
+import com.binitech.fiscal.application.ports.outbound.DanfePort;
 import com.binitech.fiscal.application.ports.outbound.FiscalPreferenceRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.IssuerRepositoryPort;
 import com.binitech.fiscal.application.usecases.NfceProcessorTest.FakeSefaz;
@@ -83,6 +84,7 @@ class ServicesTest {
         "123.456.789.110",
         TaxRegime.SIMPLES_NACIONAL,
         address(),
+        null,
         null,
         null,
         null,
@@ -179,6 +181,7 @@ class ServicesTest {
               null,
               null,
               null,
+              null,
               false,
               false);
       assertThatThrownBy(() -> service.save("t1", wrongCity))
@@ -218,7 +221,8 @@ class ServicesTest {
       documents = new InMemoryDocuments();
       sefaz = new FakeSefaz();
       NfceProcessor processor =
-          new NfceProcessor(documents, issuers, (t, e, s) -> 1, sefaz, new PlainCipher(), clock) {
+          new NfceProcessor(
+              documents, issuers, (t, e, m, s) -> 1, sefaz, new PlainCipher(), clock) {
             @Override
             public void processNow(String documentId) {
               processed.add(documentId);
@@ -230,7 +234,7 @@ class ServicesTest {
               issuers,
               preferences,
               sefaz,
-              (xml, url) -> new byte[] {1},
+              danfe(new byte[] {1}),
               new PlainCipher(),
               processor,
               Runnable::run,
@@ -322,7 +326,7 @@ class ServicesTest {
               issuers,
               preferences,
               cancelling,
-              (xml, url) -> new byte[0],
+              danfe(new byte[0]),
               new PlainCipher(),
               null,
               Runnable::run,
@@ -361,5 +365,19 @@ class ServicesTest {
     assertThat(new String(cipher.decrypt(first), StandardCharsets.UTF_8)).isEqualTo("segredo");
     assertThatThrownBy(() -> new AesGcmSecretCipher("curta"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  static DanfePort danfe(byte[] pdf) {
+    return new DanfePort() {
+      @Override
+      public byte[] render(String xml, String urlConsulta) {
+        return pdf;
+      }
+
+      @Override
+      public byte[] renderNfe(String xml) {
+        return pdf;
+      }
+    };
   }
 }

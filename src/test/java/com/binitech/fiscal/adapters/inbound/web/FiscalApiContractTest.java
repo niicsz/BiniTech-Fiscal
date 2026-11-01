@@ -18,12 +18,15 @@ import com.binitech.fiscal.application.ports.inbound.FiscalPreferenceUseCase;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase.IssuerCommand;
 import com.binitech.fiscal.application.ports.inbound.NfceUseCase;
+import com.binitech.fiscal.application.ports.inbound.ReturnUseCase;
 import com.binitech.fiscal.application.ports.outbound.AuthenticationPort;
 import com.binitech.fiscal.domain.Address;
 import com.binitech.fiscal.domain.FiscalDocument;
 import com.binitech.fiscal.domain.FiscalPreference;
 import com.binitech.fiscal.domain.FiscalStatus;
 import com.binitech.fiscal.domain.Issuer;
+import com.binitech.fiscal.domain.ReturnDocument;
+import com.binitech.fiscal.domain.ReturnStatus;
 import com.binitech.fiscal.domain.SessionIdentity;
 import com.binitech.fiscal.domain.StoredCertificate;
 import com.binitech.fiscal.domain.TaxRegime;
@@ -31,6 +34,7 @@ import com.binitech.fiscal.domain.exception.BusinessException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +54,7 @@ import org.springframework.test.web.servlet.MockMvc;
       "pdv.service-url=http://localhost:1",
       "spring.rabbitmq.listener.simple.auto-startup=false",
       "fiscal.retry-interval=600000",
+      "fiscal.return-retry-interval=600000",
       "management.health.rabbit.enabled=false"
     })
 @AutoConfigureMockMvc
@@ -63,6 +68,7 @@ class FiscalApiContractTest {
   @MockitoBean private IssuerUseCase issuers;
   @MockitoBean private NfceUseCase nfce;
   @MockitoBean private FiscalPreferenceUseCase preferences;
+  @MockitoBean private ReturnUseCase returns;
 
   @BeforeEach
   void sessions() {
@@ -296,5 +302,60 @@ class FiscalApiContractTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.decided").value(true))
         .andExpect(jsonPath("$.nfceEnabled").value(true));
+  }
+
+  private ReturnDocument returnDocument() {
+    ReturnDocument document = new ReturnDocument();
+    document.setReturnId("r1");
+    document.setSaleId("s1");
+    document.setStatus(ReturnStatus.AUTHORIZED);
+    document.setEnvironment(2);
+    document.setSerie(2);
+    document.setNumero(7);
+    document.setChave("35261111222333000181550020000000071876543210");
+    document.setReferencedChave("35261011222333000181650010000000421123456789");
+    document.setCStat("100");
+    document.setTotal(new BigDecimal("27.90"));
+    document.setAuthorizedAt(Instant.parse("2026-11-01T15:00:00Z"));
+    return document;
+  }
+
+  @Test
+  @DisplayName("Devoluções: lista por venda, DANFE em PDF e retry só para o administrador")
+  void returns() throws Exception {
+    when(returns.list("t1", "s1")).thenReturn(List.of(returnDocument()));
+    mvc.perform(get("/api/fiscal/returns").param("saleId", "s1").header("Authorization", OPERATOR))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].returnId").value("r1"))
+        .andExpect(jsonPath("$[0].status").value("AUTHORIZED"))
+        .andExpect(jsonPath("$[0].serie").value(2))
+        .andExpect(jsonPath("$[0].numero").value(7))
+        .andExpect(
+            jsonPath("$[0].referencedChave").value("35261011222333000181650010000000421123456789"));
+
+    mvc.perform(get("/api/fiscal/returns").header("Authorization", OPERATOR))
+        .andExpect(status().isBadRequest());
+
+    when(returns.danfe("t1", "r1")).thenReturn(new byte[] {'%', 'P', 'D', 'F'});
+    mvc.perform(get("/api/fiscal/returns/r1/danfe").header("Authorization", OPERATOR))
+        .andExpect(status().isOk())
+        .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+        .andExpect(
+            header().string("Content-Disposition", "inline; filename=\"nfe-devolucao-r1.pdf\""));
+
+    mvc.perform(post("/api/fiscal/returns/r1/retry").header("Authorization", OPERATOR))
+        .andExpect(status().isForbidden());
+    verify(returns, never()).retry(any(), any());
+
+    when(returns.retry("t1", "r1")).thenReturn(returnDocument());
+    mvc.perform(post("/api/fiscal/returns/r1/retry").header("Authorization", ADMIN))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("AUTHORIZED"));
+
+    when(returns.danfe("t1", "r2"))
+        .thenThrow(
+            new BusinessException("A NF-e de devolução ainda não foi autorizada pela SEFAZ."));
+    mvc.perform(get("/api/fiscal/returns/r2/danfe").header("Authorization", OPERATOR))
+        .andExpect(status().isUnprocessableEntity());
   }
 }

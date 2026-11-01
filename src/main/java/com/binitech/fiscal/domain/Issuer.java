@@ -15,6 +15,7 @@ public class Issuer {
   private String telefone;
   private String email;
   private int serie;
+  private int nfeSerie;
   private int environment;
   private String defaultNcm;
   private String defaultCfop;
@@ -103,6 +104,14 @@ public class Issuer {
 
   public void setSerie(int serie) {
     this.serie = serie;
+  }
+
+  public int getNfeSerie() {
+    return nfeSerie <= 0 ? 1 : nfeSerie;
+  }
+
+  public void setNfeSerie(int nfeSerie) {
+    this.nfeSerie = nfeSerie;
   }
 
   public int getEnvironment() {

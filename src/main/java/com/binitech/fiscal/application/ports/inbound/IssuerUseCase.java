@@ -26,6 +26,7 @@ public interface IssuerUseCase {
       String telefone,
       String email,
       Integer serie,
+      Integer nfeSerie,
       String defaultNcm,
       String defaultCfop,
       String defaultCsosn,

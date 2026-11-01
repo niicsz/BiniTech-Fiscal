@@ -33,6 +33,7 @@ import com.binitech.fiscal.domain.CertificateInfo;
 import com.binitech.fiscal.domain.FiscalDocument;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.PreparedNfce;
+import com.binitech.fiscal.domain.ReturnDocument;
 import com.binitech.fiscal.domain.SefazOutcome;
 import com.binitech.fiscal.domain.SefazOutcome.Kind;
 import com.binitech.fiscal.domain.exception.BusinessException;
@@ -121,12 +122,37 @@ public class JavaNfeSefazAdapter implements SefazPort {
   }
 
   @Override
+  public PreparedNfce prepareReturn(
+      Issuer issuer, Credentials credentials, ReturnDocument document) {
+    ConfiguracoesNfe config = config(issuer, credentials);
+    try {
+      TEnviNFe signed = Nfe.montaNfe(config, builder.buildReturn(config, issuer, document), true);
+      String chave = signed.getNFe().get(0).getInfNFe().getId().substring(3);
+      return new PreparedNfce(chave, XmlNfeUtil.objectToXml(signed), null, null);
+    } catch (NfeException e) {
+      throw new BusinessException("XML da NF-e de devolução inválido: " + rootMessage(e));
+    } catch (javax.xml.bind.JAXBException e) {
+      throw new BusinessException("Falha ao gerar o XML da NF-e de devolução: " + rootMessage(e));
+    }
+  }
+
+  @Override
   public SefazOutcome authorize(Issuer issuer, Credentials credentials, String signedXml) {
+    return authorize(issuer, credentials, signedXml, DocumentoEnum.NFCE);
+  }
+
+  @Override
+  public SefazOutcome authorizeNfe(Issuer issuer, Credentials credentials, String signedXml) {
+    return authorize(issuer, credentials, signedXml, DocumentoEnum.NFE);
+  }
+
+  private SefazOutcome authorize(
+      Issuer issuer, Credentials credentials, String signedXml, DocumentoEnum model) {
     ConfiguracoesNfe config = config(issuer, credentials);
     TEnviNFe enviNFe = XmlNfeUtil.xmlToObject(signedXml, TEnviNFe.class);
     TRetEnviNFe retorno;
     try {
-      retorno = Nfe.enviarNfe(config, enviNFe, DocumentoEnum.NFCE);
+      retorno = Nfe.enviarNfe(config, enviNFe, model);
     } catch (NfeException e) {
       throw communicationFailure("autorização", e);
     }
@@ -138,17 +164,18 @@ public class JavaNfeSefazAdapter implements SefazPort {
       return fromProtocol(enviNFe, retorno.getProtNFe());
     }
     if (LOT_RECEIVED.equals(lotStatus) && retorno.getInfRec() != null) {
-      return pollReceipt(config, enviNFe, retorno.getInfRec().getNRec());
+      return pollReceipt(config, enviNFe, retorno.getInfRec().getNRec(), model);
     }
     return SefazOutcome.of(classify(lotStatus), lotStatus, retorno.getXMotivo());
   }
 
-  private SefazOutcome pollReceipt(ConfiguracoesNfe config, TEnviNFe enviNFe, String receipt) {
+  private SefazOutcome pollReceipt(
+      ConfiguracoesNfe config, TEnviNFe enviNFe, String receipt, DocumentoEnum model) {
     for (int attempt = 0; attempt < 5; attempt++) {
       TRetConsReciNFe retorno;
       try {
         Thread.sleep(1000L * (attempt + 1));
-        retorno = Nfe.consultaRecibo(config, receipt, DocumentoEnum.NFCE);
+        retorno = Nfe.consultaRecibo(config, receipt, model);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new SefazCommunicationException("Consulta do recibo interrompida.", true, e);
@@ -186,10 +213,21 @@ public class JavaNfeSefazAdapter implements SefazPort {
   @Override
   public SefazOutcome consult(
       Issuer issuer, Credentials credentials, String chave, String signedXml) {
+    return consult(issuer, credentials, chave, signedXml, DocumentoEnum.NFCE);
+  }
+
+  @Override
+  public SefazOutcome consultNfe(
+      Issuer issuer, Credentials credentials, String chave, String signedXml) {
+    return consult(issuer, credentials, chave, signedXml, DocumentoEnum.NFE);
+  }
+
+  private SefazOutcome consult(
+      Issuer issuer, Credentials credentials, String chave, String signedXml, DocumentoEnum model) {
     ConfiguracoesNfe config = config(issuer, credentials);
     TRetConsSitNFe retorno;
     try {
-      retorno = Nfe.consultaXml(config, chave, DocumentoEnum.NFCE);
+      retorno = Nfe.consultaXml(config, chave, model);
     } catch (NfeException e) {
       throw communicationFailure("consulta", e, true);
     }
@@ -256,10 +294,26 @@ public class JavaNfeSefazAdapter implements SefazPort {
   @Override
   public SefazOutcome voidNumber(
       Issuer issuer, Credentials credentials, int serie, int numero, String reason) {
+    return voidNumber(issuer, credentials, serie, numero, reason, DocumentoEnum.NFCE);
+  }
+
+  @Override
+  public SefazOutcome voidNfeNumber(
+      Issuer issuer, Credentials credentials, int serie, int numero, String reason) {
+    return voidNumber(issuer, credentials, serie, numero, reason, DocumentoEnum.NFE);
+  }
+
+  private SefazOutcome voidNumber(
+      Issuer issuer,
+      Credentials credentials,
+      int serie,
+      int numero,
+      String reason,
+      DocumentoEnum model) {
     ConfiguracoesNfe config = config(issuer, credentials);
     TInutNFe inutilizacao =
         InutilizacaoUtil.montaInutilizacao(
-            DocumentoEnum.NFCE,
+            model,
             issuer.getCnpj(),
             serie,
             numero,
@@ -268,7 +322,7 @@ public class JavaNfeSefazAdapter implements SefazPort {
             LocalDateTime.now(BRASILIA),
             config);
     try {
-      TRetInutNFe retorno = Nfe.inutilizacao(config, inutilizacao, DocumentoEnum.NFCE, true);
+      TRetInutNFe retorno = Nfe.inutilizacao(config, inutilizacao, model, true);
       String cStat = retorno.getInfInut().getCStat();
       Kind kind = VOID_OK.contains(cStat) ? Kind.AUTHORIZED : classify(cStat);
       return new SefazOutcome(

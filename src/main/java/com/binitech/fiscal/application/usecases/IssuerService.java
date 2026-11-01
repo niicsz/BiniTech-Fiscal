@@ -83,6 +83,10 @@ public class IssuerService implements IssuerUseCase {
     if (serie < 1 || serie > 889) {
       throw new BusinessException("A série da NFC-e deve estar entre 1 e 889.");
     }
+    int nfeSerie = command.nfeSerie() == null ? 1 : command.nfeSerie();
+    if (nfeSerie < 1 || nfeSerie > 889) {
+      throw new BusinessException("A série da NF-e deve estar entre 1 e 889.");
+    }
     String defaultNcm = optionalDigits(command.defaultNcm(), 8, "O NCM padrão deve ter 8 dígitos.");
     String defaultCfop =
         optionalDigits(command.defaultCfop(), 4, "O CFOP padrão deve ter 4 dígitos.");
@@ -103,6 +107,7 @@ public class IssuerService implements IssuerUseCase {
     issuer.setTelefone(digits(command.telefone()));
     issuer.setEmail(trimToNull(command.email()));
     issuer.setSerie(serie);
+    issuer.setNfeSerie(nfeSerie);
     issuer.setEnvironment(environment);
     issuer.setDefaultNcm(defaultNcm);
     issuer.setDefaultCfop(defaultCfop);

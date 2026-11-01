@@ -15,6 +15,9 @@ public class RabbitConfiguration {
   public static final String SALE_COMPLETED_KEY = "sale.completed";
   public static final String SALES_QUEUE = "fiscal.sales.completed";
   public static final String SALES_DEAD_QUEUE = "fiscal.sales.completed.dead";
+  public static final String SALE_RETURNED_KEY = "sale.returned";
+  public static final String RETURNS_QUEUE = "fiscal.sales.returned";
+  public static final String RETURNS_DEAD_QUEUE = "fiscal.sales.returned.dead";
 
   @Bean
   TopicExchange salesExchange() {
@@ -37,6 +40,24 @@ public class RabbitConfiguration {
   @Bean
   Binding fiscalSalesBinding(Queue fiscalSalesQueue, TopicExchange salesExchange) {
     return BindingBuilder.bind(fiscalSalesQueue).to(salesExchange).with(SALE_COMPLETED_KEY);
+  }
+
+  @Bean
+  Queue fiscalReturnsQueue() {
+    return QueueBuilder.durable(RETURNS_QUEUE)
+        .deadLetterExchange("")
+        .deadLetterRoutingKey(RETURNS_DEAD_QUEUE)
+        .build();
+  }
+
+  @Bean
+  Queue fiscalReturnsDeadQueue() {
+    return QueueBuilder.durable(RETURNS_DEAD_QUEUE).build();
+  }
+
+  @Bean
+  Binding fiscalReturnsBinding(Queue fiscalReturnsQueue, TopicExchange salesExchange) {
+    return BindingBuilder.bind(fiscalReturnsQueue).to(salesExchange).with(SALE_RETURNED_KEY);
   }
 
   @Bean

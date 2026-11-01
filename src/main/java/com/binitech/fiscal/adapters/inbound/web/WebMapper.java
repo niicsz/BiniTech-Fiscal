@@ -6,6 +6,7 @@ import com.binitech.fiscal.adapters.inbound.web.generated.model.IssuerDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.IssuerRequestDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.NfceDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.NfceStatus;
+import com.binitech.fiscal.adapters.inbound.web.generated.model.ReturnDocumentDTO;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.SefazOutcomeKind;
 import com.binitech.fiscal.adapters.inbound.web.generated.model.SefazStatusDTO;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase.IssuerCommand;
@@ -13,6 +14,7 @@ import com.binitech.fiscal.domain.Address;
 import com.binitech.fiscal.domain.FiscalDocument;
 import com.binitech.fiscal.domain.FiscalPreference;
 import com.binitech.fiscal.domain.Issuer;
+import com.binitech.fiscal.domain.ReturnDocument;
 import com.binitech.fiscal.domain.SefazOutcome;
 import com.binitech.fiscal.domain.TaxRegime;
 import java.time.Instant;
@@ -38,6 +40,7 @@ public final class WebMapper {
         request.getTelefone(),
         request.getEmail(),
         request.getSerie(),
+        request.getNfeSerie(),
         request.getDefaultNcm(),
         request.getDefaultCfop(),
         request.getDefaultCsosn(),
@@ -60,6 +63,7 @@ public final class WebMapper {
         .telefone(issuer.getTelefone())
         .email(issuer.getEmail())
         .serie(issuer.getSerie())
+        .nfeSerie(issuer.getNfeSerie())
         .environment(issuer.getEnvironment())
         .defaultNcm(issuer.getDefaultNcm())
         .defaultCfop(issuer.getDefaultCfop())
@@ -140,6 +144,28 @@ public final class WebMapper {
         .contingency("9".equals(document.getTpEmis()))
         .authorizedAt(offset(document.getAuthorizedAt()))
         .cancelledAt(offset(document.getCancelledAt()));
+  }
+
+  public static ReturnDocumentDTO returnDocument(ReturnDocument document) {
+    return new ReturnDocumentDTO()
+        .returnId(document.getReturnId())
+        .saleId(document.getSaleId())
+        .status(
+            document.getStatus() == null
+                ? null
+                : com.binitech.fiscal.adapters.inbound.web.generated.model.ReturnStatus.fromValue(
+                    document.getStatus().name()))
+        .environment(document.getEnvironment())
+        .serie(document.getSerie())
+        .numero(document.getNumero())
+        .chave(document.getChave())
+        .protocolo(document.getProtocolo())
+        .referencedChave(document.getReferencedChave())
+        .cStat(document.getCStat())
+        .xMotivo(document.getXMotivo())
+        .lastError(document.getLastError())
+        .total(document.getTotal())
+        .authorizedAt(offset(document.getAuthorizedAt()));
   }
 
   private static OffsetDateTime offset(Instant instant) {

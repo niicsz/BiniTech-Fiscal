@@ -13,6 +13,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -60,6 +61,11 @@ public class GlobalExceptionHandler {
             .map(error -> "Campo inválido: " + error.getField())
             .orElse("Requisição inválida.");
     return error(HttpStatus.BAD_REQUEST, message);
+  }
+
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  ResponseEntity<ErrorDTO> missingParameter(MissingServletRequestParameterException e) {
+    return error(HttpStatus.BAD_REQUEST, "Parâmetro obrigatório ausente: " + e.getParameterName());
   }
 
   @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class})

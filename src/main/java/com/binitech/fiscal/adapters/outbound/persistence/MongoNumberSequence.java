@@ -20,8 +20,8 @@ public class MongoNumberSequence implements NumberSequencePort {
   }
 
   @Override
-  public int next(String tenantId, int environment, int serie) {
-    String key = tenantId + ":" + environment + ":65:" + serie;
+  public int next(String tenantId, int environment, String model, int serie) {
+    String key = tenantId + ":" + environment + ":" + model + ":" + serie;
     Document updated =
         mongo.findAndModify(
             Query.query(Criteria.where("_id").is(key)),
