@@ -79,14 +79,8 @@ public class IssuerService implements IssuerUseCase {
       throw new BusinessException("Informe a inscrição estadual (obrigatória para NFC-e).");
     }
     Address address = validAddress(command.address());
-    int serie = command.serie() == null ? 1 : command.serie();
-    if (serie < 1 || serie > 889) {
-      throw new BusinessException("A série da NFC-e deve estar entre 1 e 889.");
-    }
-    int nfeSerie = command.nfeSerie() == null ? 1 : command.nfeSerie();
-    if (nfeSerie < 1 || nfeSerie > 889) {
-      throw new BusinessException("A série da NF-e deve estar entre 1 e 889.");
-    }
+    int serie = series(command.serie(), "A série da NFC-e deve estar entre 1 e 889.");
+    int nfeSerie = series(command.nfeSerie(), "A série da NF-e deve estar entre 1 e 889.");
     String defaultNcm = optionalDigits(command.defaultNcm(), 8, "O NCM padrão deve ter 8 dígitos.");
     String defaultCfop =
         optionalDigits(command.defaultCfop(), 4, "O CFOP padrão deve ter 4 dígitos.");
@@ -295,5 +289,13 @@ public class IssuerService implements IssuerUseCase {
 
   private static boolean isBlank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private static int series(Integer value, String message) {
+    int serie = value == null ? 1 : value;
+    if (serie < 1 || serie > 889) {
+      throw new BusinessException(message);
+    }
+    return serie;
   }
 }
