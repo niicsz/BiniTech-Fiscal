@@ -14,12 +14,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.binitech.fiscal.application.ports.inbound.FiscalPreferenceUseCase;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase.IssuerCommand;
 import com.binitech.fiscal.application.ports.inbound.NfceUseCase;
 import com.binitech.fiscal.application.ports.outbound.AuthenticationPort;
 import com.binitech.fiscal.domain.Address;
 import com.binitech.fiscal.domain.FiscalDocument;
+import com.binitech.fiscal.domain.FiscalPreference;
 import com.binitech.fiscal.domain.FiscalStatus;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.SessionIdentity;
@@ -60,6 +62,7 @@ class FiscalApiContractTest {
   @MockitoBean private AuthenticationPort authentication;
   @MockitoBean private IssuerUseCase issuers;
   @MockitoBean private NfceUseCase nfce;
+  @MockitoBean private FiscalPreferenceUseCase preferences;
 
   @BeforeEach
   void sessions() {
@@ -265,5 +268,33 @@ class FiscalApiContractTest {
         .andExpect(content().contentType(MediaType.APPLICATION_PDF))
         .andExpect(header().string("Content-Disposition", "inline; filename=\"nfce-s1.pdf\""))
         .andExpect(content().bytes("%PDF-1.4".getBytes()));
+  }
+
+  @Test
+  @DisplayName("Preferência: sem resposta vem decided=false e só o administrador decide")
+  void preferences() throws Exception {
+    when(preferences.find("t1")).thenReturn(Optional.empty());
+    mvc.perform(get("/api/fiscal/preferences").header("Authorization", OPERATOR))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.decided").value(false))
+        .andExpect(jsonPath("$.nfceEnabled").value(false));
+
+    mvc.perform(
+            put("/api/fiscal/preferences")
+                .header("Authorization", OPERATOR)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nfceEnabled\":true}"))
+        .andExpect(status().isForbidden());
+
+    when(preferences.decide("t1", true, "u1"))
+        .thenReturn(new FiscalPreference("t1", true, Instant.parse("2026-11-01T12:00:00Z"), "u1"));
+    mvc.perform(
+            put("/api/fiscal/preferences")
+                .header("Authorization", ADMIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nfceEnabled\":true}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.decided").value(true))
+        .andExpect(jsonPath("$.nfceEnabled").value(true));
   }
 }

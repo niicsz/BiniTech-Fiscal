@@ -10,11 +10,42 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: Preferences
+    description: Ativação da NFC-e por loja (muitas lojas são de pessoa física e não emitem)
   - name: Issuer
     description: Dados fiscais e certificado A1 da loja
   - name: Nfce
     description: Emissão, consulta, cancelamento e cupom da NFC-e
 paths:
+  /api/fiscal/preferences:
+    get:
+      tags: [Preferences]
+      operationId: getFiscalPreferences
+      summary: Consultar se a loja emite NFC-e
+      responses:
+        '200':
+          description: Preferência fiscal da loja (decided=false quando o administrador ainda não respondeu)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FiscalPreferencesDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Preferences]
+      operationId: updateFiscalPreferences
+      summary: Ativar ou desativar a emissão de NFC-e da loja (administrador da loja)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateFiscalPreferencesDTO' }
+      responses:
+        '200':
+          description: Preferência salva
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FiscalPreferencesDTO' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /api/fiscal/issuer:
     get:
       tags: [Issuer]
@@ -176,6 +207,11 @@ components:
       required: true
       schema: { type: string }
   responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorDTO' }
     Unauthorized:
       description: Sessão ausente ou inválida
     Forbidden:
@@ -288,6 +324,17 @@ components:
         contingency: { type: boolean }
         authorizedAt: { type: string, format: date-time }
         cancelledAt: { type: string, format: date-time }
+    FiscalPreferencesDTO:
+      type: object
+      properties:
+        decided: { type: boolean, description: Se o administrador já respondeu se a loja emite NFC-e }
+        nfceEnabled: { type: boolean }
+        decidedAt: { type: string, format: date-time }
+    UpdateFiscalPreferencesDTO:
+      type: object
+      required: [nfceEnabled]
+      properties:
+        nfceEnabled: { type: boolean }
     ErrorDTO:
       type: object
       properties:
