@@ -3,11 +3,13 @@ package com.binitech.fiscal.application.usecases;
 import com.binitech.fiscal.application.ports.inbound.NfceUseCase;
 import com.binitech.fiscal.application.ports.outbound.DanfePort;
 import com.binitech.fiscal.application.ports.outbound.FiscalDocumentRepositoryPort;
+import com.binitech.fiscal.application.ports.outbound.FiscalPreferenceRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.IssuerRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.SecretCipherPort;
 import com.binitech.fiscal.application.ports.outbound.SefazPort;
 import com.binitech.fiscal.application.ports.outbound.SefazPort.Credentials;
 import com.binitech.fiscal.domain.FiscalDocument;
+import com.binitech.fiscal.domain.FiscalPreference;
 import com.binitech.fiscal.domain.FiscalStatus;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.SaleSnapshot;
@@ -34,6 +36,7 @@ public class NfceService implements NfceUseCase {
 
   private final FiscalDocumentRepositoryPort documents;
   private final IssuerRepositoryPort issuers;
+  private final FiscalPreferenceRepositoryPort preferences;
   private final SefazPort sefaz;
   private final DanfePort danfe;
   private final SecretCipherPort cipher;
@@ -44,6 +47,7 @@ public class NfceService implements NfceUseCase {
   public NfceService(
       FiscalDocumentRepositoryPort documents,
       IssuerRepositoryPort issuers,
+      FiscalPreferenceRepositoryPort preferences,
       SefazPort sefaz,
       DanfePort danfe,
       SecretCipherPort cipher,
@@ -52,6 +56,7 @@ public class NfceService implements NfceUseCase {
       Clock clock) {
     this.documents = documents;
     this.issuers = issuers;
+    this.preferences = preferences;
     this.sefaz = sefaz;
     this.danfe = danfe;
     this.cipher = cipher;
@@ -63,6 +68,9 @@ public class NfceService implements NfceUseCase {
   @Override
   public void registerSale(SaleSnapshot sale) {
     validate(sale);
+    if (!nfceEnabled(sale.tenantId())) {
+      return;
+    }
     Optional<Issuer> issuer = issuers.findByTenantId(sale.tenantId());
     if (issuer.isEmpty()) {
       return;
@@ -87,6 +95,10 @@ public class NfceService implements NfceUseCase {
 
   @Override
   public FiscalDocument requestIssue(String tenantId, String saleId, String consumerCpf) {
+    if (!nfceEnabled(tenantId)) {
+      throw new BusinessException(
+          "A emissão de NFC-e está desativada para esta loja. Ative em Configurações.");
+    }
     Issuer issuer =
         issuers
             .findByTenantId(tenantId)
@@ -209,6 +221,10 @@ public class NfceService implements NfceUseCase {
             log.error("Falha ao processar NFC-e: saleId={}", document.getSaleId(), e);
           }
         });
+  }
+
+  private boolean nfceEnabled(String tenantId) {
+    return preferences.findByTenantId(tenantId).map(FiscalPreference::nfceEnabled).orElse(false);
   }
 
   private FiscalDocument require(String tenantId, String saleId) {
