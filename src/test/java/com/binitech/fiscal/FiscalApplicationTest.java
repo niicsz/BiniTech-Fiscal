@@ -13,7 +13,7 @@ import org.springframework.http.HttpStatus;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "fiscal.master-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-      "auth.service-url=http://localhost:1",
+      "pdv.service-url=http://localhost:1",
       "spring.rabbitmq.listener.simple.auto-startup=false",
       "fiscal.retry-interval=600000",
       "management.health.rabbit.enabled=false"

@@ -22,7 +22,7 @@ public class HttpAuthenticationAdapter implements AuthenticationPort {
       SessionResponse response =
           client
               .get()
-              .uri("/api/auth/session")
+              .uri("/api/auth/me")
               .headers(headers -> headers.setBearerAuth(accessToken))
               .retrieve()
               .body(SessionResponse.class);

@@ -31,10 +31,10 @@ spring:
 server:
   port: ${PORT:8083}
 
-auth:
-  service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
-  connect-timeout: ${AUTH_CONNECT_TIMEOUT:2s}
-  read-timeout: ${AUTH_READ_TIMEOUT:5s}
+pdv:
+  service-url: ${PDV_SERVICE_URL:http://localhost:8080}
+  connect-timeout: ${PDV_CONNECT_TIMEOUT:2s}
+  read-timeout: ${PDV_READ_TIMEOUT:5s}
 
 fiscal:
   environment: ${FISCAL_ENVIRONMENT:2}
