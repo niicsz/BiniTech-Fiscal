@@ -161,9 +161,9 @@ public class BeanConfiguration {
 
   @Bean
   AuthenticationPort authenticationPort(
-      @Value("${auth.service-url}") String url,
-      @Value("${auth.connect-timeout:2s}") Duration connectTimeout,
-      @Value("${auth.read-timeout:5s}") Duration readTimeout) {
+      @Value("${pdv.service-url}") String url,
+      @Value("${pdv.connect-timeout:2s}") Duration connectTimeout,
+      @Value("${pdv.read-timeout:5s}") Duration readTimeout) {
     return new HttpAuthenticationAdapter(client(url, connectTimeout, readTimeout));
   }
 

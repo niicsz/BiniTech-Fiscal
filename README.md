@@ -37,7 +37,7 @@ Frontend ──(REST /api/fiscal/**)──▶ emitir / consultar / cancelar   �
 
 - O arquivo `.pfx` e a senha do A1 ficam **criptografados com AES-256-GCM** (`FISCAL_MASTER_KEY`) e nunca são devolvidos pela API.
 - Ao enviar o certificado, o serviço confere a validade e se o CNPJ dele é o da loja.
-- As requisições usam a sessão do BiniTech Auth (`/api/auth/session`). Dados fiscais, certificado e cancelamento exigem administrador da loja.
+- As requisições são validadas pelo PDV (`GET /api/auth/me`), que confirma o token no BiniTech Auth e devolve o papel do usuário a partir do cadastro do PDV, a fonte oficial de permissões. Dados fiscais, certificado e cancelamento exigem administrador da loja.
 - Cada chamada à SEFAZ usa o próprio cliente HTTPS do certificado da loja (`modoMultithreading`), sem estado global entre lojas.
 
 ## Escopo atual
@@ -72,7 +72,7 @@ API-first, como o PDV e o Product-Import: o contrato fica em `src/main/resources
 | `FISCAL_ENVIRONMENT` | `2` homologação, `1` produção | `2` |
 | `FISCAL_SEFAZ_TIMEOUT_MS` | Timeout das chamadas à SEFAZ | `20000` |
 | `FISCAL_RESP_TEC_CNPJ` / `_CONTACT` / `_EMAIL` / `_PHONE` | Responsável técnico (opcional) | — |
-| `AUTH_SERVICE_URL` | BiniTech Auth | `http://localhost:8081` |
+| `PDV_SERVICE_URL` | BiniTech PDV, usado para validar a sessão e obter o papel do usuário (`GET /api/auth/me`) | `http://localhost:8080` |
 | `RABBITMQ_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` | RabbitMQ compartilhado com o PDV | `localhost` |
 | `CORS_ALLOWED_ORIGINS` | Origens do frontend | `http://localhost:4200` |
 
