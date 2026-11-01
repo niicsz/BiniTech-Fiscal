@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: BiniTech Fiscal API
+  version: 1.0.0
+  description: >-
+    Emissão de NFC-e (modelo 65) direto na SEFAZ com o certificado A1 de cada loja.
+    Todas as rotas exigem a sessão do BiniTech Auth (Bearer). Sessões sem loja vinculada recebem 403.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Issuer
+    description: Dados fiscais e certificado A1 da loja
+  - name: Nfce
+    description: Emissão, consulta, cancelamento e cupom da NFC-e
+paths:
+  /api/fiscal/issuer:
+    get:
+      tags: [Issuer]
+      operationId: getIssuer
+      summary: Consultar os dados fiscais da loja
+      responses:
+        '200':
+          description: Dados fiscais da loja
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuerDTO' }
+        '204': { description: Loja ainda sem dados fiscais }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Issuer]
+      operationId: saveIssuer
+      summary: Salvar os dados fiscais da loja (administrador da loja)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IssuerRequestDTO' }
+      responses:
+        '200':
+          description: Dados fiscais salvos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuerDTO' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/BusinessError' }
+  /api/fiscal/issuer/certificate:
+    post:
+      tags: [Issuer]
+      operationId: uploadCertificate
+      summary: Enviar o certificado A1 (.pfx/.p12) da loja (administrador da loja)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, password]
+              properties:
+                file: { type: string, format: binary }
+                password: { type: string }
+      responses:
+        '200':
+          description: Certificado validado e guardado criptografado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssuerDTO' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { description: Arquivo maior que o permitido }
+        '422': { $ref: '#/components/responses/BusinessError' }
+  /api/fiscal/issuer/sefaz-status:
+    get:
+      tags: [Issuer]
+      operationId: getSefazStatus
+      summary: Consultar o status do serviço NFC-e da SEFAZ com o certificado da loja
+      responses:
+        '200':
+          description: Resposta da SEFAZ
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SefazStatusDTO' }
+        '422': { $ref: '#/components/responses/BusinessError' }
+  /api/fiscal/cep/{cep}:
+    get:
+      tags: [Issuer]
+      operationId: lookupCep
+      summary: Buscar endereço e código IBGE pelo CEP
+      parameters:
+        - name: cep
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Endereço encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AddressDTO' }
+        '404': { description: CEP não encontrado }
+  /api/fiscal/nfce/{saleId}:
+    get:
+      tags: [Nfce]
+      operationId: getNfce
+      summary: Consultar a NFC-e de uma venda
+      parameters: [{ $ref: '#/components/parameters/SaleId' }]
+      responses:
+        '200':
+          description: Situação da NFC-e
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NfceDTO' }
+        '204': { description: Venda ainda não recebida pelo serviço fiscal }
+  /api/fiscal/nfce/{saleId}/issue:
+    post:
+      tags: [Nfce]
+      operationId: issueNfce
+      summary: Emitir a NFC-e da venda (ou reemitir depois de rejeição)
+      parameters: [{ $ref: '#/components/parameters/SaleId' }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IssueNfceRequestDTO' }
+      responses:
+        '200':
+          description: NFC-e enviada para emissão
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NfceDTO' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessError' }
+  /api/fiscal/nfce/{saleId}/cancel:
+    post:
+      tags: [Nfce]
+      operationId: cancelNfce
+      summary: Cancelar a NFC-e autorizada (administrador da loja)
+      parameters: [{ $ref: '#/components/parameters/SaleId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelNfceRequestDTO' }
+      responses:
+        '200':
+          description: NFC-e cancelada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NfceDTO' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessError' }
+  /api/fiscal/nfce/{saleId}/danfe:
+    get:
+      tags: [Nfce]
+      operationId: downloadDanfe
+      summary: Baixar o cupom NFC-e (DANFE 80 mm) em PDF
+      parameters: [{ $ref: '#/components/parameters/SaleId' }]
+      responses:
+        '200':
+          description: Cupom em PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    SaleId:
+      name: saleId
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Unauthorized:
+      description: Sessão ausente ou inválida
+    Forbidden:
+      description: Sem loja vinculada ou sem permissão de administrador da loja
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorDTO' }
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorDTO' }
+    BusinessError:
+      description: Regra de negócio ou validação fiscal violada
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorDTO' }
+  schemas:
+    TaxRegime:
+      type: string
+      enum: [SIMPLES_NACIONAL, MEI]
+    NfceStatus:
+      type: string
+      enum: [AWAITING_REQUEST, PENDING, CONTINGENCY, AUTHORIZED, REJECTED, DENIED, CANCELLED, VOIDED]
+    SefazOutcomeKind:
+      type: string
+      enum: [AUTHORIZED, DENIED, REJECTED, DUPLICATE, UNAVAILABLE, NOT_FOUND]
+    AddressDTO:
+      type: object
+      properties:
+        logradouro: { type: string }
+        numero: { type: string }
+        complemento: { type: string }
+        bairro: { type: string }
+        codigoMunicipio: { type: string, description: Código IBGE com 7 dígitos }
+        cidade: { type: string }
+        uf: { type: string }
+        cep: { type: string }
+    IssuerRequestDTO:
+      type: object
+      required: [cnpj, razaoSocial, inscricaoEstadual, regime, address]
+      properties:
+        cnpj: { type: string }
+        razaoSocial: { type: string }
+        nomeFantasia: { type: string }
+        inscricaoEstadual: { type: string }
+        regime: { $ref: '#/components/schemas/TaxRegime' }
+        address: { $ref: '#/components/schemas/AddressDTO' }
+        telefone: { type: string }
+        email: { type: string }
+        serie: { type: integer, minimum: 1, maximum: 889 }
+        defaultNcm: { type: string }
+        defaultCfop: { type: string }
+        defaultCsosn: { type: string }
+        autoIssue: { type: boolean, default: false }
+        contingencyEnabled: { type: boolean, default: false }
+    IssuerDTO:
+      type: object
+      properties:
+        cnpj: { type: string }
+        razaoSocial: { type: string }
+        nomeFantasia: { type: string }
+        inscricaoEstadual: { type: string }
+        regime: { $ref: '#/components/schemas/TaxRegime' }
+        address: { $ref: '#/components/schemas/AddressDTO' }
+        telefone: { type: string }
+        email: { type: string }
+        serie: { type: integer }
+        environment: { type: integer, description: '1 = produção, 2 = homologação' }
+        defaultNcm: { type: string }
+        defaultCfop: { type: string }
+        defaultCsosn: { type: string }
+        autoIssue: { type: boolean }
+        contingencyEnabled: { type: boolean }
+        certificateHolder: { type: string }
+        certificateValidUntil: { type: string, format: date }
+        readyToIssue: { type: boolean }
+    SefazStatusDTO:
+      type: object
+      properties:
+        kind: { $ref: '#/components/schemas/SefazOutcomeKind' }
+        cStat: { type: string }
+        xMotivo: { type: string }
+    IssueNfceRequestDTO:
+      type: object
+      properties:
+        consumerCpf: { type: string, description: CPF do consumidor (opcional) }
+    CancelNfceRequestDTO:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 15, maxLength: 255 }
+    NfceDTO:
+      type: object
+      properties:
+        saleId: { type: string }
+        status: { $ref: '#/components/schemas/NfceStatus' }
+        environment: { type: integer }
+        serie: { type: integer }
+        numero: { type: integer }
+        chave: { type: string }
+        protocolo: { type: string }
+        cStat: { type: string }
+        xMotivo: { type: string }
+        lastError: { type: string }
+        qrCode: { type: string }
+        urlChave: { type: string }
+        total: { type: number }
+        consumerCpf: { type: string }
+        contingency: { type: boolean }
+        authorizedAt: { type: string, format: date-time }
+        cancelledAt: { type: string, format: date-time }
+    ErrorDTO:
+      type: object
+      properties:
+        message: { type: string }
