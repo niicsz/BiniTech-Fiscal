@@ -1,6 +1,6 @@
 # BiniTech Fiscal
 
-Serviço de emissão de **NFC-e (modelo 65)** do BiniTech PDV, falando **direto com a SEFAZ**, sem intermediário. Cada loja assina as próprias notas com o **certificado digital A1 dela**.
+Serviço de emissão de **NFC-e** do BiniTech PDV, falando **direto com a SEFAZ**, sem intermediário. Cada loja assina as próprias notas com o **certificado digital A1 dela**.
 
 O XML, a assinatura XMLDSig e os webservices SOAP de cada estado usam a biblioteca open source [Java_NFe](https://github.com/Samuel-Oliveira/Java_NFe) (MIT). O resto é deste serviço: fila, retentativas, contingência, numeração, armazenamento seguro do certificado, cupom em PDF e API.
 
