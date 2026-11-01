@@ -214,26 +214,33 @@ public class ReturnProcessor {
   }
 
   private void processPending(Issuer issuer, Credentials credentials, ReturnDocument document) {
-    if (document.isDeliveryUncertain() && document.getChave() != null) {
-      SefazOutcome consulted =
-          sefaz.consultNfe(issuer, credentials, document.getChave(), document.getSignedXml());
-      switch (consulted.kind()) {
-        case AUTHORIZED -> {
-          markAuthorized(document, consulted);
-          return;
-        }
-        case UNAVAILABLE -> {
-          onUnavailable(document, true, consulted.xMotivo());
-          return;
-        }
-        default -> document.setDeliveryUncertain(false);
-      }
+    if (settledByConsult(issuer, credentials, document)) {
+      return;
     }
     ensureNumber(issuer, document);
     if (needsRebuild(document)) {
       prepare(issuer, credentials, document);
     }
     send(issuer, credentials, document);
+  }
+
+  private boolean settledByConsult(
+      Issuer issuer, Credentials credentials, ReturnDocument document) {
+    if (!document.isDeliveryUncertain() || document.getChave() == null) {
+      return false;
+    }
+    SefazOutcome consulted =
+        sefaz.consultNfe(issuer, credentials, document.getChave(), document.getSignedXml());
+    if (consulted.kind() == SefazOutcome.Kind.AUTHORIZED) {
+      markAuthorized(document, consulted);
+      return true;
+    }
+    if (consulted.kind() == SefazOutcome.Kind.UNAVAILABLE) {
+      onUnavailable(document, true, consulted.xMotivo());
+      return true;
+    }
+    document.setDeliveryUncertain(false);
+    return false;
   }
 
   private void send(Issuer issuer, Credentials credentials, ReturnDocument document) {
