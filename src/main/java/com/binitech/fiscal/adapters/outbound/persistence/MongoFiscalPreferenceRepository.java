@@ -13,6 +13,7 @@ import org.springframework.data.mongodb.core.query.Update;
 public class MongoFiscalPreferenceRepository implements FiscalPreferenceRepositoryPort {
 
   static final String COLLECTION = "fiscal_preferences";
+  private static final String TENANT_ID = "tenantId";
 
   private final MongoTemplate mongo;
 
@@ -23,13 +24,13 @@ public class MongoFiscalPreferenceRepository implements FiscalPreferenceReposito
   public void ensureIndexes() {
     mongo
         .indexOps(COLLECTION)
-        .createIndex(new Index().on("tenantId", Sort.Direction.ASC).unique().named("uk_tenant"));
+        .createIndex(new Index().on(TENANT_ID, Sort.Direction.ASC).unique().named("uk_tenant"));
   }
 
   @Override
   public FiscalPreference save(FiscalPreference preference) {
     mongo.upsert(
-        Query.query(Criteria.where("tenantId").is(preference.tenantId())),
+        Query.query(Criteria.where(TENANT_ID).is(preference.tenantId())),
         new Update()
             .set("nfceEnabled", preference.nfceEnabled())
             .set("decidedAt", preference.decidedAt())
@@ -42,7 +43,7 @@ public class MongoFiscalPreferenceRepository implements FiscalPreferenceReposito
   public Optional<FiscalPreference> findByTenantId(String tenantId) {
     return Optional.ofNullable(
         mongo.findOne(
-            Query.query(Criteria.where("tenantId").is(tenantId)),
+            Query.query(Criteria.where(TENANT_ID).is(tenantId)),
             FiscalPreference.class,
             COLLECTION));
   }
