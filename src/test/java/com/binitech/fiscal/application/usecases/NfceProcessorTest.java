@@ -12,6 +12,7 @@ import com.binitech.fiscal.domain.FiscalDocument;
 import com.binitech.fiscal.domain.FiscalStatus;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.PreparedNfce;
+import com.binitech.fiscal.domain.ReturnDocument;
 import com.binitech.fiscal.domain.SaleSnapshot;
 import com.binitech.fiscal.domain.SefazOutcome;
 import com.binitech.fiscal.domain.SefazOutcome.Kind;
@@ -69,7 +70,7 @@ class NfceProcessorTest {
         new NfceProcessor(
             documents,
             issuers,
-            (tenant, env, serie) -> ++sequence[0],
+            (tenant, env, model, serie) -> ++sequence[0],
             sefaz,
             new PlainCipher(),
             clock);
@@ -331,7 +332,9 @@ class NfceProcessorTest {
     final Deque<SefazCommunicationException> authorizeErrors = new ArrayDeque<>();
     final Deque<SefazOutcome> consultResults = new ArrayDeque<>();
     SefazOutcome voidResult;
+    SefazOutcome cancelResult;
     RuntimeException prepareError;
+    int cancelCalls;
     int authorizeCalls;
     int consultCalls;
     int prepareCalls;
@@ -374,7 +377,41 @@ class NfceProcessorTest {
     @Override
     public SefazOutcome cancel(
         Issuer issuer, Credentials credentials, String chave, String protocolo, String reason) {
-      return null;
+      cancelCalls++;
+      return cancelResult;
+    }
+
+    @Override
+    public PreparedNfce prepareReturn(
+        Issuer issuer, Credentials credentials, ReturnDocument document) {
+      prepareCalls++;
+      if (prepareError != null) {
+        throw prepareError;
+      }
+      String chave =
+          "3526101122233300018155001"
+              + String.format("%09d", document.getNumero())
+              + "1"
+              + document.getCnf()
+              + "0";
+      return new PreparedNfce(chave, "<signed-nfe/>", null, null);
+    }
+
+    @Override
+    public SefazOutcome authorizeNfe(Issuer issuer, Credentials credentials, String signedXml) {
+      return authorize(issuer, credentials, signedXml);
+    }
+
+    @Override
+    public SefazOutcome consultNfe(
+        Issuer issuer, Credentials credentials, String chave, String xml) {
+      return consult(issuer, credentials, chave, xml);
+    }
+
+    @Override
+    public SefazOutcome voidNfeNumber(
+        Issuer issuer, Credentials credentials, int serie, int numero, String reason) {
+      return voidResult;
     }
 
     @Override

@@ -1,7 +1,9 @@
 package com.binitech.fiscal.config;
 
 import com.binitech.fiscal.adapters.inbound.messaging.SaleCompletedListener;
+import com.binitech.fiscal.adapters.inbound.messaging.SaleReturnedListener;
 import com.binitech.fiscal.adapters.inbound.scheduling.NfceRetryScheduler;
+import com.binitech.fiscal.adapters.inbound.scheduling.ReturnRetryScheduler;
 import com.binitech.fiscal.adapters.outbound.crypto.AesGcmSecretCipher;
 import com.binitech.fiscal.adapters.outbound.http.HttpAuthenticationAdapter;
 import com.binitech.fiscal.adapters.outbound.http.ViaCepAddressAdapter;
@@ -9,6 +11,7 @@ import com.binitech.fiscal.adapters.outbound.persistence.MongoFiscalDocumentRepo
 import com.binitech.fiscal.adapters.outbound.persistence.MongoFiscalPreferenceRepository;
 import com.binitech.fiscal.adapters.outbound.persistence.MongoIssuerRepository;
 import com.binitech.fiscal.adapters.outbound.persistence.MongoNumberSequence;
+import com.binitech.fiscal.adapters.outbound.persistence.MongoReturnDocumentRepository;
 import com.binitech.fiscal.adapters.outbound.sefaz.JasperDanfeAdapter;
 import com.binitech.fiscal.adapters.outbound.sefaz.JavaNfeSefazAdapter;
 import com.binitech.fiscal.adapters.outbound.sefaz.NfceXmlBuilder;
@@ -16,6 +19,7 @@ import com.binitech.fiscal.adapters.outbound.sefaz.NfceXmlBuilder.ResponsibleTec
 import com.binitech.fiscal.application.ports.inbound.FiscalPreferenceUseCase;
 import com.binitech.fiscal.application.ports.inbound.IssuerUseCase;
 import com.binitech.fiscal.application.ports.inbound.NfceUseCase;
+import com.binitech.fiscal.application.ports.inbound.ReturnUseCase;
 import com.binitech.fiscal.application.ports.outbound.AddressLookupPort;
 import com.binitech.fiscal.application.ports.outbound.AuthenticationPort;
 import com.binitech.fiscal.application.ports.outbound.DanfePort;
@@ -23,12 +27,15 @@ import com.binitech.fiscal.application.ports.outbound.FiscalDocumentRepositoryPo
 import com.binitech.fiscal.application.ports.outbound.FiscalPreferenceRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.IssuerRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.NumberSequencePort;
+import com.binitech.fiscal.application.ports.outbound.ReturnDocumentRepositoryPort;
 import com.binitech.fiscal.application.ports.outbound.SecretCipherPort;
 import com.binitech.fiscal.application.ports.outbound.SefazPort;
 import com.binitech.fiscal.application.usecases.FiscalPreferenceService;
 import com.binitech.fiscal.application.usecases.IssuerService;
 import com.binitech.fiscal.application.usecases.NfceProcessor;
 import com.binitech.fiscal.application.usecases.NfceService;
+import com.binitech.fiscal.application.usecases.ReturnProcessor;
+import com.binitech.fiscal.application.usecases.ReturnService;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
@@ -51,6 +58,13 @@ public class BeanConfiguration {
   @Bean
   MongoFiscalDocumentRepository fiscalDocumentRepository(MongoTemplate mongo) {
     MongoFiscalDocumentRepository repository = new MongoFiscalDocumentRepository(mongo);
+    repository.ensureIndexes();
+    return repository;
+  }
+
+  @Bean
+  MongoReturnDocumentRepository returnDocumentRepository(MongoTemplate mongo) {
+    MongoReturnDocumentRepository repository = new MongoReturnDocumentRepository(mongo);
     repository.ensureIndexes();
     return repository;
   }
@@ -118,6 +132,48 @@ public class BeanConfiguration {
       SecretCipherPort cipher,
       Clock clock) {
     return new NfceProcessor(documents, issuers, sequences, sefaz, cipher, clock);
+  }
+
+  @Bean
+  ReturnProcessor returnProcessor(
+      ReturnDocumentRepositoryPort returns,
+      FiscalDocumentRepositoryPort documents,
+      IssuerRepositoryPort issuers,
+      NumberSequencePort sequences,
+      SefazPort sefaz,
+      SecretCipherPort cipher,
+      Clock clock,
+      @Value("${fiscal.nfce.cancel-window-minutes:30}") long cancelWindowMinutes) {
+    return new ReturnProcessor(
+        returns,
+        documents,
+        issuers,
+        sequences,
+        sefaz,
+        cipher,
+        clock,
+        Duration.ofMinutes(cancelWindowMinutes));
+  }
+
+  @Bean
+  ReturnUseCase returnUseCase(
+      ReturnDocumentRepositoryPort returns,
+      IssuerRepositoryPort issuers,
+      DanfePort danfe,
+      ReturnProcessor processor,
+      ExecutorService fiscalExecutor,
+      Clock clock) {
+    return new ReturnService(returns, issuers, danfe, processor, fiscalExecutor, clock);
+  }
+
+  @Bean
+  SaleReturnedListener saleReturnedListener(ReturnUseCase returns) {
+    return new SaleReturnedListener(returns);
+  }
+
+  @Bean
+  ReturnRetryScheduler returnRetryScheduler(ReturnProcessor processor) {
+    return new ReturnRetryScheduler(processor);
   }
 
   @Bean

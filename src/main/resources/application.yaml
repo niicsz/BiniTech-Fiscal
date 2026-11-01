@@ -41,6 +41,9 @@ fiscal:
   master-key: ${FISCAL_MASTER_KEY}
   sefaz-timeout-ms: ${FISCAL_SEFAZ_TIMEOUT_MS:20000}
   retry-interval: ${FISCAL_RETRY_INTERVAL_MS:2000}
+  return-retry-interval: ${FISCAL_RETURN_RETRY_INTERVAL_MS:5000}
+  nfce:
+    cancel-window-minutes: ${FISCAL_NFCE_CANCEL_WINDOW_MINUTES:30}
   resp-tec:
     cnpj: ${FISCAL_RESP_TEC_CNPJ:}
     contact: ${FISCAL_RESP_TEC_CONTACT:}
@@ -65,3 +68,7 @@ management:
     health:
       probes:
         enabled: true
+
+logging:
+  level:
+    br.com.swconsultoria: WARN

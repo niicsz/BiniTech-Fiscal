@@ -116,6 +116,24 @@ class MongoRepositoriesTest {
   }
 
   @Test
+  @DisplayName("Campos zerados no domínio também são apagados no banco")
+  void savingClearsNullFields() {
+    FiscalDocument saved = documents.save(document("s9", FiscalStatus.PENDING, now));
+    saved.setLastError("SEFAZ fora do ar");
+    saved.setSignedXml("<NFe/>");
+    documents.save(saved);
+
+    saved.setLastError(null);
+    saved.setSignedXml(null);
+    documents.save(saved);
+
+    FiscalDocument loaded = documents.findByTenantIdAndSaleId("t1", "s9").orElseThrow();
+    assertThat(loaded.getLastError()).isNull();
+    assertThat(loaded.getSignedXml()).isNull();
+    assertThat(loaded.getVersion()).isEqualTo(2L);
+  }
+
+  @Test
   @DisplayName("Só pega documentos vencidos, livres e em status que precisam de trabalho")
   void claimsOnlyDueWork() {
     documents.save(document("future", FiscalStatus.PENDING, now.plusSeconds(60)));

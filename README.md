@@ -1,6 +1,6 @@
 # BiniTech Fiscal
 
-Serviço de emissão de **NFC-e** do BiniTech PDV, falando **direto com a SEFAZ**, sem intermediário. Cada loja assina as próprias notas com o **certificado digital A1 dela**.
+Serviço de emissão de **NFC-e** e da **NF-e de devolução** do BiniTech PDV, falando **direto com a SEFAZ**, sem intermediário. Cada loja assina as próprias notas com o **certificado digital A1 dela**.
 
 O XML, a assinatura XMLDSig e os webservices SOAP de cada estado usam a biblioteca open source [Java_NFe](https://github.com/Samuel-Oliveira/Java_NFe) (MIT). O resto é deste serviço: fila, retentativas, contingência, numeração, armazenamento seguro do certificado, cupom em PDF e API.
 
@@ -17,6 +17,19 @@ Frontend ──(REST /api/fiscal/**)──▶ emitir / consultar / cancelar   �
 2. Se a loja tiver emitente configurado, o serviço grava um documento fiscal por venda (índice único `tenantId + saleId`, então mensagem repetida não duplica nota).
 3. Com **emissão automática**, a nota vai para `PENDING` e é processada na hora. Sem emissão automática, fica em `AWAITING_REQUEST` até o caixa pedir pela API, que permite informar o CPF.
 4. A máquina de estados numera, monta, assina, valida contra os XSDs oficiais e envia para a SEFAZ.
+
+### Devoluções
+
+Quando o PDV registra uma devolução, ele publica `sale.returned` (fila `fiscal.sales.returned`, com DLQ `fiscal.sales.returned.dead`). O serviço grava um documento por devolução (índice único `tenantId + returnId`) e decide sozinho o documento fiscal:
+
+| Situação da NFC-e da venda | O que acontece |
+|---|---|
+| Não existe, não foi emitida, rejeitada ou já cancelada | `NOT_REQUIRED`: não há nota a reverter. Se a venda ainda não chegou ao fiscal, espera até 1 h. |
+| Em emissão ou contingência | `WAITING_ORIGINAL`: espera a NFC-e ser autorizada. |
+| Autorizada, devolução **total**, primeira devolução da venda e dentro do prazo (`FISCAL_NFCE_CANCEL_WINDOW_MINUTES`, padrão 30) | Cancela a NFC-e (`NFCE_CANCELLED`). Se a SEFAZ recusar o cancelamento, segue para a NF-e. |
+| Autorizada nos demais casos | Emite a **NF-e de devolução**: modelo 55, `tpNF=0` (entrada), `finNFe=4`, `refNFe` com a chave da NFC-e, CFOP de devolução (5102→1202, 5101→1201, 5405/5403→1411, 5401/5402→1410), CSOSN 900, PIS/COFINS CST 98 e `tPag=90`. O destinatário é o consumidor pelo CPF; sem CPF, a própria loja. |
+
+A NF-e usa série própria (`nfeSerie` no emitente, padrão 1) e numeração separada da NFC-e. Tem as mesmas garantias da NFC-e: número gravado antes do envio, consulta da chave depois de timeout, retentativas, inutilização de número abandonado em 24 h e trava otimista. Não há contingência offline para o modelo 55; a nota espera a SEFAZ voltar.
 
 ### Resiliência
 
@@ -43,13 +56,14 @@ Frontend ──(REST /api/fiscal/**)──▶ emitir / consultar / cancelar   �
 ## Escopo atual
 
 - NFC-e para **Simples Nacional (CRT 1)** e **MEI (CRT 4)**, com CSOSN 102, 103, 300, 400 e 500. PIS/COFINS saem como CST 49.
+- NF-e de devolução (entrada) de vendas com NFC-e, com DANFE A4.
 - QR Code **v3** (NT 2025.001), sem CSC na emissão on-line.
 - Responsável técnico (`infRespTec`) opcional, pelas variáveis `FISCAL_RESP_TEC_*`.
 - Regime normal (CST, alíquotas, IBS/CBS) ainda não é suportado.
 
 ## API
 
-API-first, como o PDV e o Product-Import: o contrato fica em `src/main/resources/openapi/swagger.yaml` e o `openapi-generator-maven-plugin` gera as interfaces (`IssuerApi`, `NfceApi`) e os DTOs que os controllers implementam. A documentação interativa fica em `/swagger-ui.html`.
+API-first, como o PDV e o Product-Import: o contrato fica em `src/main/resources/openapi/swagger.yaml` e o `openapi-generator-maven-plugin` gera as interfaces (`IssuerApi`, `NfceApi`, `ReturnsApi`) e os DTOs que os controllers implementam. A documentação interativa fica em `/swagger-ui.html`.
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -61,6 +75,9 @@ API-first, como o PDV e o Product-Import: o contrato fica em `src/main/resources
 | POST | `/api/fiscal/nfce/{saleId}/issue` | Emite (ou reemite após rejeição), com `consumerCpf` opcional |
 | POST | `/api/fiscal/nfce/{saleId}/cancel` | Cancela (motivo de 15 a 255 caracteres) |
 | GET | `/api/fiscal/nfce/{saleId}/danfe` | Cupom NFC-e 80 mm em PDF |
+| GET | `/api/fiscal/returns?saleId=` | Documentos fiscais das devoluções da venda |
+| POST | `/api/fiscal/returns/{returnId}/retry` | Tenta de novo a NF-e de devolução rejeitada (administrador) |
+| GET | `/api/fiscal/returns/{returnId}/danfe` | DANFE A4 da NF-e de devolução em PDF |
 
 ## Variáveis de ambiente
 
@@ -71,6 +88,8 @@ API-first, como o PDV e o Product-Import: o contrato fica em `src/main/resources
 | `FISCAL_MASTER_KEY` | Chave AES-256 em Base64 (32 bytes) para os certificados | — |
 | `FISCAL_ENVIRONMENT` | `2` homologação, `1` produção | `2` |
 | `FISCAL_SEFAZ_TIMEOUT_MS` | Timeout das chamadas à SEFAZ | `20000` |
+| `FISCAL_NFCE_CANCEL_WINDOW_MINUTES` | Prazo para cancelar a NFC-e numa devolução total | `30` |
+| `FISCAL_RETURN_RETRY_INTERVAL_MS` | Intervalo do reprocessamento das devoluções | `5000` |
 | `FISCAL_RESP_TEC_CNPJ` / `_CONTACT` / `_EMAIL` / `_PHONE` | Responsável técnico (opcional) | — |
 | `PDV_SERVICE_URL` | BiniTech PDV, usado para validar a sessão e obter o papel do usuário (`GET /api/auth/me`) | `http://localhost:8080` |
 | `RABBITMQ_HOST` / `_PORT` / `_USERNAME` / `_PASSWORD` | RabbitMQ compartilhado com o PDV | `localhost` |

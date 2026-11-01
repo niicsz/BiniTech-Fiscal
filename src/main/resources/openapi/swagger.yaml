@@ -3,7 +3,8 @@ info:
   title: BiniTech Fiscal API
   version: 1.0.0
   description: >-
-    Emissão de NFC-e (modelo 65) direto na SEFAZ com o certificado A1 de cada loja.
+    Emissão de NFC-e (modelo 65) e da NF-e de devolução (modelo 55) direto na SEFAZ com o
+    certificado A1 de cada loja.
     Todas as rotas exigem a sessão do BiniTech Auth (Bearer). Sessões sem loja vinculada recebem 403.
 servers:
   - url: /
@@ -16,6 +17,10 @@ tags:
     description: Dados fiscais e certificado A1 da loja
   - name: Nfce
     description: Emissão, consulta, cancelamento e cupom da NFC-e
+  - name: Returns
+    description: >-
+      Documento fiscal das devoluções: cancelamento da NFC-e (devolução total dentro do prazo)
+      ou NF-e de entrada modelo 55 referenciando a NFC-e
 paths:
   /api/fiscal/preferences:
     get:
@@ -195,6 +200,52 @@ paths:
               schema: { type: string, format: binary }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/BusinessError' }
+  /api/fiscal/returns:
+    get:
+      tags: [Returns]
+      operationId: listReturns
+      summary: Listar os documentos fiscais das devoluções de uma venda
+      parameters:
+        - name: saleId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Devoluções da venda no serviço fiscal
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReturnDocumentDTO' }
+  /api/fiscal/returns/{returnId}/retry:
+    post:
+      tags: [Returns]
+      operationId: retryReturn
+      summary: Tentar de novo a NF-e de devolução rejeitada (administrador da loja)
+      parameters: [{ $ref: '#/components/parameters/ReturnId' }]
+      responses:
+        '200':
+          description: Devolução enviada de novo para processamento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReturnDocumentDTO' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/fiscal/returns/{returnId}/danfe:
+    get:
+      tags: [Returns]
+      operationId: downloadReturnDanfe
+      summary: Baixar o DANFE (A4) da NF-e de devolução em PDF
+      parameters: [{ $ref: '#/components/parameters/ReturnId' }]
+      responses:
+        '200':
+          description: DANFE em PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/BusinessError' }
 components:
   securitySchemes:
     bearerAuth:
@@ -203,6 +254,11 @@ components:
   parameters:
     SaleId:
       name: saleId
+      in: path
+      required: true
+      schema: { type: string }
+    ReturnId:
+      name: returnId
       in: path
       required: true
       schema: { type: string }
@@ -263,6 +319,7 @@ components:
         telefone: { type: string }
         email: { type: string }
         serie: { type: integer, minimum: 1, maximum: 889 }
+        nfeSerie: { type: integer, minimum: 1, maximum: 889, description: Série da NF-e de devolução (modelo 55) }
         defaultNcm: { type: string }
         defaultCfop: { type: string }
         defaultCsosn: { type: string }
@@ -280,6 +337,7 @@ components:
         telefone: { type: string }
         email: { type: string }
         serie: { type: integer }
+        nfeSerie: { type: integer }
         environment: { type: integer, description: '1 = produção, 2 = homologação' }
         defaultNcm: { type: string }
         defaultCfop: { type: string }
@@ -324,6 +382,26 @@ components:
         contingency: { type: boolean }
         authorizedAt: { type: string, format: date-time }
         cancelledAt: { type: string, format: date-time }
+    ReturnStatus:
+      type: string
+      enum: [WAITING_ORIGINAL, PENDING, AUTHORIZED, REJECTED, NFCE_CANCELLED, NOT_REQUIRED, VOIDED]
+    ReturnDocumentDTO:
+      type: object
+      properties:
+        returnId: { type: string }
+        saleId: { type: string }
+        status: { $ref: '#/components/schemas/ReturnStatus' }
+        environment: { type: integer }
+        serie: { type: integer }
+        numero: { type: integer }
+        chave: { type: string }
+        protocolo: { type: string }
+        referencedChave: { type: string, description: Chave da NFC-e da venda }
+        cStat: { type: string }
+        xMotivo: { type: string }
+        lastError: { type: string }
+        total: { type: number }
+        authorizedAt: { type: string, format: date-time }
     FiscalPreferencesDTO:
       type: object
       properties:

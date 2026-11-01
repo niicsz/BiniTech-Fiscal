@@ -14,6 +14,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.ReplaceOptions;
 import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -62,9 +63,10 @@ public class MongoFiscalDocumentRepository implements FiscalDocumentRepositoryPo
     bson.remove("_id");
     bson.put("version", current + 1);
     var result =
-        mongo.updateFirst(
+        mongo.replace(
             Query.query(Criteria.where("_id").is(document.getId()).and("version").is(current)),
-            Update.fromDocument(new Document("$set", bson)),
+            bson,
+            ReplaceOptions.none(),
             COLLECTION);
     if (result.getMatchedCount() == 0) {
       throw new OptimisticLockingFailureException(

@@ -20,4 +20,14 @@ public class JasperDanfeAdapter implements DanfePort {
       throw new BusinessException("Não foi possível gerar o cupom da NFC-e.");
     }
   }
+
+  @Override
+  public byte[] renderNfe(String xml) {
+    try {
+      return ImpressaoNfeUtil.impressaoPdfByte(ImpressaoNfeUtil.impressaoPadraoNFe(xml));
+    } catch (Exception | LinkageError e) {
+      log.error("Falha ao gerar o DANFE da NF-e: {}", e.toString(), e);
+      throw new BusinessException("Não foi possível gerar o DANFE da NF-e de devolução.");
+    }
+  }
 }

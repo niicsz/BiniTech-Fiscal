@@ -4,6 +4,7 @@ import com.binitech.fiscal.domain.CertificateInfo;
 import com.binitech.fiscal.domain.FiscalDocument;
 import com.binitech.fiscal.domain.Issuer;
 import com.binitech.fiscal.domain.PreparedNfce;
+import com.binitech.fiscal.domain.ReturnDocument;
 import com.binitech.fiscal.domain.SefazOutcome;
 
 public interface SefazPort {
@@ -23,6 +24,15 @@ public interface SefazPort {
       Issuer issuer, Credentials credentials, int serie, int numero, String reason);
 
   SefazOutcome serviceStatus(Issuer issuer, Credentials credentials);
+
+  PreparedNfce prepareReturn(Issuer issuer, Credentials credentials, ReturnDocument document);
+
+  SefazOutcome authorizeNfe(Issuer issuer, Credentials credentials, String signedXml);
+
+  SefazOutcome consultNfe(Issuer issuer, Credentials credentials, String chave, String signedXml);
+
+  SefazOutcome voidNfeNumber(
+      Issuer issuer, Credentials credentials, int serie, int numero, String reason);
 
   record Credentials(byte[] pfx, String password) {}
 }
