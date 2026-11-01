@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: BiniTech Fiscal
+  threads:
+    virtual:
+      enabled: true
+  data:
+    mongodb:
+      uri: ${FISCAL_MONGODB_URI}
+      database: ${FISCAL_MONGODB_DATABASE:binitech_fiscal}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        prefetch: 5
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 6
+          initial-interval: 2s
+          multiplier: 2
+          max-interval: 60s
+  servlet:
+    multipart:
+      max-file-size: 64KB
+      max-request-size: 128KB
+
+server:
+  port: ${PORT:8083}
+
+auth:
+  service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  connect-timeout: ${AUTH_CONNECT_TIMEOUT:2s}
+  read-timeout: ${AUTH_READ_TIMEOUT:5s}
+
+fiscal:
+  environment: ${FISCAL_ENVIRONMENT:2}
+  master-key: ${FISCAL_MASTER_KEY}
+  sefaz-timeout-ms: ${FISCAL_SEFAZ_TIMEOUT_MS:20000}
+  retry-interval: ${FISCAL_RETRY_INTERVAL_MS:2000}
+  resp-tec:
+    cnpj: ${FISCAL_RESP_TEC_CNPJ:}
+    contact: ${FISCAL_RESP_TEC_CONTACT:}
+    email: ${FISCAL_RESP_TEC_EMAIL:}
+    phone: ${FISCAL_RESP_TEC_PHONE:}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
