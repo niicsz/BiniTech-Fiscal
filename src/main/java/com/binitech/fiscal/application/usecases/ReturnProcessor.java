@@ -67,19 +67,18 @@ public class ReturnProcessor {
   private final Duration cancelWindow;
   private final SecureRandom random = new SecureRandom();
 
-  public ReturnProcessor(
+  public record Stores(
       ReturnDocumentRepositoryPort returns,
       FiscalDocumentRepositoryPort documents,
       IssuerRepositoryPort issuers,
-      NumberSequencePort sequences,
-      SefazPort sefaz,
-      SecretCipherPort cipher,
-      Clock clock,
-      Duration cancelWindow) {
-    this.returns = returns;
-    this.documents = documents;
-    this.issuers = issuers;
-    this.sequences = sequences;
+      NumberSequencePort sequences) {}
+
+  public ReturnProcessor(
+      Stores stores, SefazPort sefaz, SecretCipherPort cipher, Clock clock, Duration cancelWindow) {
+    this.returns = stores.returns();
+    this.documents = stores.documents();
+    this.issuers = stores.issuers();
+    this.sequences = stores.sequences();
     this.sefaz = sefaz;
     this.cipher = cipher;
     this.clock = clock;
@@ -411,7 +410,7 @@ public class ReturnProcessor {
   }
 
   static Duration backoff(int attempts) {
-    int index = Math.max(0, Math.min(attempts - 1, BACKOFF.size() - 1));
+    int index = Math.clamp(attempts - 1L, 0, BACKOFF.size() - 1);
     return BACKOFF.get(index);
   }
 }

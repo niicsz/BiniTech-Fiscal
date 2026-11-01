@@ -73,13 +73,14 @@ class ReturnProcessorTest {
     int[] sequence = {0};
     processor =
         new ReturnProcessor(
-            returns,
-            documents,
-            issuers,
-            (tenant, env, model, serie) -> {
-              sequenceKeys.add(model + ":" + serie);
-              return ++sequence[0];
-            },
+            new ReturnProcessor.Stores(
+                returns,
+                documents,
+                issuers,
+                (tenant, env, model, serie) -> {
+                  sequenceKeys.add(model + ":" + serie);
+                  return ++sequence[0];
+                }),
             sefaz,
             new PlainCipher(),
             clock,

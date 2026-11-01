@@ -145,10 +145,7 @@ public class BeanConfiguration {
       Clock clock,
       @Value("${fiscal.nfce.cancel-window-minutes:30}") long cancelWindowMinutes) {
     return new ReturnProcessor(
-        returns,
-        documents,
-        issuers,
-        sequences,
+        new ReturnProcessor.Stores(returns, documents, issuers, sequences),
         sefaz,
         cipher,
         clock,

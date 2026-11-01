@@ -74,6 +74,7 @@ public class NfceXmlBuilder {
           "5403", "1411",
           "5405", "1411");
   private static final String ZERO = "0.00";
+  private static final String ZERO_RATE = "0.0000";
 
   private final ResponsibleTechnician technician;
 
@@ -294,7 +295,7 @@ public class NfceXmlBuilder {
     PIS.PISOutr pisOutr = new PIS.PISOutr();
     pisOutr.setCST(PIS_COFINS_ENTRY_CST);
     pisOutr.setVBC(ZERO);
-    pisOutr.setPPIS("0.0000");
+    pisOutr.setPPIS(ZERO_RATE);
     pisOutr.setVPIS(ZERO);
     pis.setPISOutr(pisOutr);
 
@@ -302,7 +303,7 @@ public class NfceXmlBuilder {
     COFINS.COFINSOutr cofinsOutr = new COFINS.COFINSOutr();
     cofinsOutr.setCST(PIS_COFINS_ENTRY_CST);
     cofinsOutr.setVBC(ZERO);
-    cofinsOutr.setPCOFINS("0.0000");
+    cofinsOutr.setPCOFINS(ZERO_RATE);
     cofinsOutr.setVCOFINS(ZERO);
     cofins.setCOFINSOutr(cofinsOutr);
 
@@ -474,7 +475,7 @@ public class NfceXmlBuilder {
     PIS.PISOutr pisOutr = new PIS.PISOutr();
     pisOutr.setCST(PIS_COFINS_CST);
     pisOutr.setVBC(ZERO);
-    pisOutr.setPPIS("0.0000");
+    pisOutr.setPPIS(ZERO_RATE);
     pisOutr.setVPIS(ZERO);
     pis.setPISOutr(pisOutr);
 
@@ -482,7 +483,7 @@ public class NfceXmlBuilder {
     COFINS.COFINSOutr cofinsOutr = new COFINS.COFINSOutr();
     cofinsOutr.setCST(PIS_COFINS_CST);
     cofinsOutr.setVBC(ZERO);
-    cofinsOutr.setPCOFINS("0.0000");
+    cofinsOutr.setPCOFINS(ZERO_RATE);
     cofinsOutr.setVCOFINS(ZERO);
     cofins.setCOFINSOutr(cofinsOutr);
 
