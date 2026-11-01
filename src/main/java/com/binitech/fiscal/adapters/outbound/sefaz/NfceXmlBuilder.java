@@ -130,23 +130,7 @@ public class NfceXmlBuilder {
     transp.setModFrete("9");
     infNFe.setTransp(transp);
     infNFe.setPag(pag(sale.payments(), total));
-    if (technician != null && technician.isConfigured()) {
-      TInfRespTec respTec = new TInfRespTec();
-      respTec.setCNPJ(technician.cnpj());
-      respTec.setXContato(technician.contact());
-      respTec.setEmail(technician.email());
-      respTec.setFone(technician.phone());
-      infNFe.setInfRespTec(respTec);
-    }
-
-    TNFe nfe = new TNFe();
-    nfe.setInfNFe(infNFe);
-    TEnviNFe enviNFe = new TEnviNFe();
-    enviNFe.setVersao(ConstantesUtil.VERSAO.NFE);
-    enviNFe.setIdLote(String.valueOf(document.getNumero()));
-    enviNFe.setIndSinc("1");
-    enviNFe.getNFe().add(nfe);
-    return enviNFe;
+    return envelope(infNFe, document.getNumero());
   }
 
   public TEnviNFe buildReturn(ConfiguracoesNfe config, Issuer issuer, ReturnDocument document) {
@@ -192,6 +176,10 @@ public class NfceXmlBuilder {
     InfAdic infAdic = new InfAdic();
     infAdic.setInfCpl(text(returnNote(document), 5000));
     infNFe.setInfAdic(infAdic);
+    return envelope(infNFe, document.getNumero());
+  }
+
+  private TEnviNFe envelope(InfNFe infNFe, Integer numero) {
     if (technician != null && technician.isConfigured()) {
       TInfRespTec respTec = new TInfRespTec();
       respTec.setCNPJ(technician.cnpj());
@@ -200,12 +188,11 @@ public class NfceXmlBuilder {
       respTec.setFone(technician.phone());
       infNFe.setInfRespTec(respTec);
     }
-
     TNFe nfe = new TNFe();
     nfe.setInfNFe(infNFe);
     TEnviNFe enviNFe = new TEnviNFe();
     enviNFe.setVersao(ConstantesUtil.VERSAO.NFE);
-    enviNFe.setIdLote(String.valueOf(document.getNumero()));
+    enviNFe.setIdLote(String.valueOf(numero));
     enviNFe.setIndSinc("1");
     enviNFe.getNFe().add(nfe);
     return enviNFe;
