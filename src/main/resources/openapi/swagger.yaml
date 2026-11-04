@@ -298,31 +298,31 @@ components:
     AddressDTO:
       type: object
       properties:
-        logradouro: { type: string }
-        numero: { type: string }
-        complemento: { type: string }
-        bairro: { type: string }
-        codigoMunicipio: { type: string, description: Código IBGE com 7 dígitos }
-        cidade: { type: string }
-        uf: { type: string }
-        cep: { type: string }
+        logradouro: { type: string, maxLength: 60 }
+        numero: { type: string, maxLength: 60 }
+        complemento: { type: string, maxLength: 60 }
+        bairro: { type: string, maxLength: 60 }
+        codigoMunicipio: { type: string, description: Código IBGE com 7 dígitos, maxLength: 7 }
+        cidade: { type: string, maxLength: 60 }
+        uf: { type: string, maxLength: 2 }
+        cep: { type: string, maxLength: 9 }
     IssuerRequestDTO:
       type: object
       required: [cnpj, razaoSocial, inscricaoEstadual, regime, address]
       properties:
-        cnpj: { type: string }
-        razaoSocial: { type: string }
-        nomeFantasia: { type: string }
-        inscricaoEstadual: { type: string }
+        cnpj: { type: string, maxLength: 18 }
+        razaoSocial: { type: string, maxLength: 60 }
+        nomeFantasia: { type: string, maxLength: 60 }
+        inscricaoEstadual: { type: string, maxLength: 20 }
         regime: { $ref: '#/components/schemas/TaxRegime' }
         address: { $ref: '#/components/schemas/AddressDTO' }
-        telefone: { type: string }
-        email: { type: string }
+        telefone: { type: string, maxLength: 20 }
+        email: { type: string, maxLength: 254 }
         serie: { type: integer, minimum: 1, maximum: 889 }
         nfeSerie: { type: integer, minimum: 1, maximum: 889, description: Série da NF-e de devolução (modelo 55) }
-        defaultNcm: { type: string }
-        defaultCfop: { type: string }
-        defaultCsosn: { type: string }
+        defaultNcm: { type: string, maxLength: 8 }
+        defaultCfop: { type: string, maxLength: 4 }
+        defaultCsosn: { type: string, maxLength: 3 }
         autoIssue: { type: boolean, default: false }
         contingencyEnabled: { type: boolean, default: false }
     IssuerDTO:
@@ -356,7 +356,7 @@ components:
     IssueNfceRequestDTO:
       type: object
       properties:
-        consumerCpf: { type: string, description: CPF do consumidor (opcional) }
+        consumerCpf: { type: string, description: CPF do consumidor (opcional), maxLength: 14 }
     CancelNfceRequestDTO:
       type: object
       required: [reason]
