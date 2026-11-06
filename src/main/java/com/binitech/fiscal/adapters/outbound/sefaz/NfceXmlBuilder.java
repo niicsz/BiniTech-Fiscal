@@ -503,35 +503,31 @@ public class NfceXmlBuilder {
     }
 
     Total toTotal() {
-      return total(products, discount, surcharge, net());
+      BigDecimal net = net();
+      ICMSTot tot = new ICMSTot();
+      tot.setVBC(ZERO);
+      tot.setVICMS(ZERO);
+      tot.setVICMSDeson(ZERO);
+      tot.setVFCP(ZERO);
+      tot.setVBCST(ZERO);
+      tot.setVST(ZERO);
+      tot.setVFCPST(ZERO);
+      tot.setVFCPSTRet(ZERO);
+      tot.setVProd(decimal(products, 2));
+      tot.setVFrete(ZERO);
+      tot.setVSeg(ZERO);
+      tot.setVDesc(decimal(discount, 2));
+      tot.setVII(ZERO);
+      tot.setVIPI(ZERO);
+      tot.setVIPIDevol(ZERO);
+      tot.setVPIS(ZERO);
+      tot.setVCOFINS(ZERO);
+      tot.setVOutro(decimal(surcharge, 2));
+      tot.setVNF(decimal(net, 2));
+      Total result = new Total();
+      result.setICMSTot(tot);
+      return result;
     }
-  }
-
-  private static Total total(
-      BigDecimal products, BigDecimal discount, BigDecimal surcharge, BigDecimal net) {
-    ICMSTot tot = new ICMSTot();
-    tot.setVBC(ZERO);
-    tot.setVICMS(ZERO);
-    tot.setVICMSDeson(ZERO);
-    tot.setVFCP(ZERO);
-    tot.setVBCST(ZERO);
-    tot.setVST(ZERO);
-    tot.setVFCPST(ZERO);
-    tot.setVFCPSTRet(ZERO);
-    tot.setVProd(decimal(products, 2));
-    tot.setVFrete(ZERO);
-    tot.setVSeg(ZERO);
-    tot.setVDesc(decimal(discount, 2));
-    tot.setVII(ZERO);
-    tot.setVIPI(ZERO);
-    tot.setVIPIDevol(ZERO);
-    tot.setVPIS(ZERO);
-    tot.setVCOFINS(ZERO);
-    tot.setVOutro(decimal(surcharge, 2));
-    tot.setVNF(decimal(net, 2));
-    Total result = new Total();
-    result.setICMSTot(tot);
-    return result;
   }
 
   static Pag pag(List<SaleSnapshot.Payment> payments, BigDecimal total) {
