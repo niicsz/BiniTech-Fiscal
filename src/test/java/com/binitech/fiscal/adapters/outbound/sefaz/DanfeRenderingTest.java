@@ -71,7 +71,9 @@ class DanfeRenderingTest {
                     "UN",
                     BigDecimal.ONE,
                     new BigDecimal("18.90"),
-                    new BigDecimal("18.90"))),
+                    new BigDecimal("18.90"),
+                    null,
+                    null)),
             List.of(new SaleSnapshot.Payment("DEBIT_CARD", new BigDecimal("18.90")))));
 
     PreparedNfce prepared = adapter.prepare(issuer, credentials, document);

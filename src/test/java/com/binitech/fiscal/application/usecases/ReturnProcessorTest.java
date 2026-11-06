@@ -144,7 +144,9 @@ class ReturnProcessorTest {
                     "UN",
                     BigDecimal.ONE,
                     new BigDecimal("27.90"),
-                    new BigDecimal("27.90")))));
+                    new BigDecimal("27.90"),
+                    null,
+                    null))));
     return returns.save(document);
   }
 

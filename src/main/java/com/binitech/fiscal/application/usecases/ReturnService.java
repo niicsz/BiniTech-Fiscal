@@ -10,7 +10,6 @@ import com.binitech.fiscal.domain.ReturnStatus;
 import com.binitech.fiscal.domain.SaleSnapshot;
 import com.binitech.fiscal.domain.exception.BusinessException;
 import com.binitech.fiscal.domain.exception.ResourceNotFoundException;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -135,10 +134,7 @@ public class ReturnService implements ReturnUseCase {
       throw new BusinessException("Devolução inválida para o serviço fiscal.");
     }
     for (SaleSnapshot.Item item : snapshot.items()) {
-      if (item.quantity() == null
-          || item.quantity().signum() <= 0
-          || item.total() == null
-          || item.total().compareTo(BigDecimal.ZERO) <= 0) {
+      if (!item.hasValidAmounts()) {
         throw new BusinessException("Item com quantidade ou valor inválido na devolução.");
       }
     }

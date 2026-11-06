@@ -86,7 +86,9 @@ class NfceSigningTest {
                     "UN",
                     new BigDecimal("2"),
                     new BigDecimal("5.50"),
-                    new BigDecimal("11.00")),
+                    new BigDecimal("11.00"),
+                    null,
+                    null),
                 new SaleSnapshot.Item(
                     "p2",
                     "Pão francês & cia <kg>",
@@ -97,7 +99,9 @@ class NfceSigningTest {
                     "KG",
                     new BigDecimal("1"),
                     new BigDecimal("9.00"),
-                    new BigDecimal("9.00"))),
+                    new BigDecimal("9.00"),
+                    null,
+                    null)),
             List.of(
                 new SaleSnapshot.Payment("PIX", new BigDecimal("5.00")),
                 new SaleSnapshot.Payment("CASH", new BigDecimal("20.00"))));
@@ -114,6 +118,61 @@ class NfceSigningTest {
     document.setTpEmis(tpEmis);
     document.setIssuedAt(Instant.now());
     return document;
+  }
+
+  @Test
+  @DisplayName("Desconto e acréscimo do item saem em vDesc e vOutro e entram no total da nota")
+  void discountAndSurchargeEnterTheTotals() {
+    FiscalDocument document = document("1", null, null);
+    SaleSnapshot original = document.getSale();
+    SaleSnapshot.Item first = original.items().get(0);
+    SaleSnapshot.Item second = original.items().get(1);
+    document.setSale(
+        new SaleSnapshot(
+            original.tenantId(),
+            original.saleId(),
+            original.occurredAt(),
+            null,
+            null,
+            List.of(
+                new SaleSnapshot.Item(
+                    first.code(),
+                    first.description(),
+                    first.barcode(),
+                    first.ncm(),
+                    first.cfop(),
+                    first.csosn(),
+                    first.unit(),
+                    first.quantity(),
+                    first.unitPrice(),
+                    first.total(),
+                    new BigDecimal("1.50"),
+                    null),
+                new SaleSnapshot.Item(
+                    second.code(),
+                    second.description(),
+                    second.barcode(),
+                    second.ncm(),
+                    second.cfop(),
+                    second.csosn(),
+                    second.unit(),
+                    second.quantity(),
+                    second.unitPrice(),
+                    second.total(),
+                    null,
+                    new BigDecimal("0.90"))),
+            List.of(new SaleSnapshot.Payment("CASH", new BigDecimal("20.00")))));
+
+    PreparedNfce prepared = adapter.prepare(issuer(), credentials, document);
+
+    assertThat(prepared.signedXml())
+        .contains("<vUnTrib>5.5000</vUnTrib><vDesc>1.50</vDesc>")
+        .contains("<vProd>9.00</vProd>")
+        .contains("<vUnTrib>9.0000</vUnTrib><vOutro>0.90</vOutro>")
+        .contains("<vProd>20.00</vProd>")
+        .contains("<vDesc>1.50</vDesc>")
+        .contains("<vNF>19.40</vNF>")
+        .contains("<vTroco>0.60</vTroco>");
   }
 
   @Test

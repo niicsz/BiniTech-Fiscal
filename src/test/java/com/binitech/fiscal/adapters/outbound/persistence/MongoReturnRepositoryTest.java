@@ -66,7 +66,9 @@ class MongoReturnRepositoryTest {
                     "UN",
                     BigDecimal.ONE,
                     new BigDecimal("5.50"),
-                    new BigDecimal("5.50")))));
+                    new BigDecimal("5.50"),
+                    null,
+                    null))));
     return document;
   }
 

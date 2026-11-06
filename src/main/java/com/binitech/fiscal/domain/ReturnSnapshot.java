@@ -16,6 +16,6 @@ public record ReturnSnapshot(
     List<SaleSnapshot.Item> items) {
 
   public BigDecimal itemsTotal() {
-    return items.stream().map(SaleSnapshot.Item::total).reduce(BigDecimal.ZERO, BigDecimal::add);
+    return items.stream().map(SaleSnapshot.Item::net).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 }

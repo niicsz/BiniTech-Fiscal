@@ -129,7 +129,9 @@ class ServicesTest {
                 "UN",
                 BigDecimal.ONE,
                 BigDecimal.TEN,
-                BigDecimal.TEN)),
+                BigDecimal.TEN,
+                null,
+                null)),
         List.of(new SaleSnapshot.Payment("CASH", BigDecimal.TEN)));
   }
 
