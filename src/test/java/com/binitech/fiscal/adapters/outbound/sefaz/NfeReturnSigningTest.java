@@ -90,7 +90,9 @@ class NfeReturnSigningTest {
                     "UN",
                     new BigDecimal("1"),
                     new BigDecimal("5.50"),
-                    new BigDecimal("5.50"))));
+                    new BigDecimal("5.50"),
+                    null,
+                    null)));
     ReturnDocument document = new ReturnDocument();
     document.setTenantId("t1");
     document.setSaleId("sale-1");

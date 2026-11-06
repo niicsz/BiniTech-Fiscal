@@ -3,7 +3,6 @@ package com.binitech.fiscal.adapters.inbound.messaging;
 import com.binitech.fiscal.application.ports.inbound.ReturnUseCase;
 import com.binitech.fiscal.config.RabbitConfiguration;
 import com.binitech.fiscal.domain.ReturnSnapshot;
-import com.binitech.fiscal.domain.SaleSnapshot;
 import com.binitech.fiscal.domain.exception.BusinessException;
 import java.time.Instant;
 import java.util.List;
@@ -58,21 +57,7 @@ public class SaleReturnedListener {
           consumerName,
           items == null
               ? List.of()
-              : items.stream()
-                  .map(
-                      item ->
-                          new SaleSnapshot.Item(
-                              item.productId(),
-                              item.description(),
-                              item.barcode(),
-                              item.ncm(),
-                              item.cfop(),
-                              item.csosn(),
-                              item.unit(),
-                              item.quantity(),
-                              item.unitPrice(),
-                              item.total()))
-                  .toList());
+              : items.stream().map(SaleCompletedListener.Item::toSnapshot).toList());
     }
   }
 }

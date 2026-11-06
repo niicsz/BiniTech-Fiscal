@@ -23,11 +23,36 @@ public record SaleSnapshot(
       String unit,
       BigDecimal quantity,
       BigDecimal unitPrice,
-      BigDecimal total) {}
+      BigDecimal total,
+      BigDecimal discount,
+      BigDecimal surcharge) {
+
+    public BigDecimal discountOrZero() {
+      return discount == null ? BigDecimal.ZERO : discount;
+    }
+
+    public BigDecimal surchargeOrZero() {
+      return surcharge == null ? BigDecimal.ZERO : surcharge;
+    }
+
+    public BigDecimal net() {
+      return total.subtract(discountOrZero()).add(surchargeOrZero());
+    }
+
+    public boolean hasValidAmounts() {
+      return quantity != null
+          && quantity.signum() > 0
+          && total != null
+          && total.signum() > 0
+          && discountOrZero().signum() >= 0
+          && surchargeOrZero().signum() >= 0
+          && discountOrZero().compareTo(total) <= 0;
+    }
+  }
 
   public record Payment(String method, BigDecimal amount) {}
 
   public BigDecimal itemsTotal() {
-    return items.stream().map(Item::total).reduce(BigDecimal.ZERO, BigDecimal::add);
+    return items.stream().map(Item::net).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 }

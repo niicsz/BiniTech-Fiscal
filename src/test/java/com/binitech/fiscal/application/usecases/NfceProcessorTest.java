@@ -117,7 +117,9 @@ class NfceProcessorTest {
                     "UN",
                     BigDecimal.ONE,
                     BigDecimal.TEN,
-                    BigDecimal.TEN)),
+                    BigDecimal.TEN,
+                    null,
+                    null)),
             List.of(new SaleSnapshot.Payment("CASH", BigDecimal.TEN))));
     return documents.save(document);
   }

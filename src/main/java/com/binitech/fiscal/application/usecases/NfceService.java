@@ -17,7 +17,6 @@ import com.binitech.fiscal.domain.SefazOutcome;
 import com.binitech.fiscal.domain.exception.BusinessException;
 import com.binitech.fiscal.domain.exception.ResourceNotFoundException;
 import com.binitech.fiscal.domain.exception.SefazCommunicationException;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -253,10 +252,7 @@ public class NfceService implements NfceUseCase {
       throw new BusinessException("Venda inválida para emissão fiscal.");
     }
     for (SaleSnapshot.Item item : sale.items()) {
-      if (item.quantity() == null
-          || item.quantity().signum() <= 0
-          || item.total() == null
-          || item.total().compareTo(BigDecimal.ZERO) <= 0) {
+      if (!item.hasValidAmounts()) {
         throw new BusinessException("Item com quantidade ou valor inválido na venda.");
       }
     }

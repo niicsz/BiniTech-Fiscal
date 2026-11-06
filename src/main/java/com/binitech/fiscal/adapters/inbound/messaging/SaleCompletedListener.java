@@ -51,23 +51,7 @@ public class SaleCompletedListener {
           occurredAt,
           consumerCpf,
           consumerName,
-          items == null
-              ? List.of()
-              : items.stream()
-                  .map(
-                      item ->
-                          new SaleSnapshot.Item(
-                              item.productId(),
-                              item.description(),
-                              item.barcode(),
-                              item.ncm(),
-                              item.cfop(),
-                              item.csosn(),
-                              item.unit(),
-                              item.quantity(),
-                              item.unitPrice(),
-                              item.total()))
-                  .toList(),
+          items == null ? List.of() : items.stream().map(Item::toSnapshot).toList(),
           payments == null
               ? List.of()
               : payments.stream()
@@ -86,7 +70,26 @@ public class SaleCompletedListener {
       String unit,
       BigDecimal quantity,
       BigDecimal unitPrice,
-      BigDecimal total) {}
+      BigDecimal total,
+      BigDecimal discount,
+      BigDecimal surcharge) {
+
+    SaleSnapshot.Item toSnapshot() {
+      return new SaleSnapshot.Item(
+          productId,
+          description,
+          barcode,
+          ncm,
+          cfop,
+          csosn,
+          unit,
+          quantity,
+          unitPrice,
+          total,
+          discount,
+          surcharge);
+    }
+  }
 
   public record Payment(String method, BigDecimal amount) {}
 }
