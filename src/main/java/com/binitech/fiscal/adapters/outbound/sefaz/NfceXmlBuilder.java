@@ -114,7 +114,7 @@ public class NfceXmlBuilder {
     }
 
     SaleSnapshot sale = document.getSale();
-    BigDecimal total = BigDecimal.ZERO;
+    Totals totals = new Totals();
     int index = 0;
     for (SaleSnapshot.Item item : sale.items()) {
       Det det = new Det();
@@ -122,14 +122,14 @@ public class NfceXmlBuilder {
       det.setProd(prod(issuer, item, homologation && index == 0));
       det.setImposto(imposto(issuer, item));
       infNFe.getDet().add(det);
-      total = total.add(money(item.total()));
+      totals.add(item);
       index++;
     }
-    infNFe.setTotal(total(total));
+    infNFe.setTotal(totals.toTotal());
     Transp transp = new Transp();
     transp.setModFrete("9");
     infNFe.setTransp(transp);
-    infNFe.setPag(pag(sale.payments(), total));
+    infNFe.setPag(pag(sale.payments(), totals.net()));
     return envelope(infNFe, document.getNumero());
   }
 
@@ -155,7 +155,7 @@ public class NfceXmlBuilder {
     infNFe.setDest(returnDest(issuer, document, homologation));
 
     ReturnSnapshot snapshot = document.getSnapshot();
-    BigDecimal total = BigDecimal.ZERO;
+    Totals totals = new Totals();
     int index = 0;
     for (SaleSnapshot.Item item : snapshot.items()) {
       Prod prod = prod(issuer, item, false);
@@ -165,10 +165,10 @@ public class NfceXmlBuilder {
       det.setProd(prod);
       det.setImposto(returnImposto());
       infNFe.getDet().add(det);
-      total = total.add(money(item.total()));
+      totals.add(item);
       index++;
     }
-    infNFe.setTotal(total(total));
+    infNFe.setTotal(totals.toTotal());
     Transp transp = new Transp();
     transp.setModFrete("9");
     infNFe.setTransp(transp);
@@ -437,6 +437,12 @@ public class NfceXmlBuilder {
     prod.setQTrib(decimal(item.quantity(), 4));
     prod.setVUnTrib(decimal(item.unitPrice(), 4));
     prod.setIndTot("1");
+    if (item.discountOrZero().signum() > 0) {
+      prod.setVDesc(decimal(item.discountOrZero(), 2));
+    }
+    if (item.surchargeOrZero().signum() > 0) {
+      prod.setVOutro(decimal(item.surchargeOrZero(), 2));
+    }
     return prod;
   }
 
@@ -481,7 +487,28 @@ public class NfceXmlBuilder {
     return imposto;
   }
 
-  private Total total(BigDecimal total) {
+  private static final class Totals {
+    private BigDecimal products = BigDecimal.ZERO;
+    private BigDecimal discount = BigDecimal.ZERO;
+    private BigDecimal surcharge = BigDecimal.ZERO;
+
+    void add(SaleSnapshot.Item item) {
+      products = products.add(money(item.total()));
+      discount = discount.add(money(item.discountOrZero()));
+      surcharge = surcharge.add(money(item.surchargeOrZero()));
+    }
+
+    BigDecimal net() {
+      return products.subtract(discount).add(surcharge);
+    }
+
+    Total toTotal() {
+      return total(products, discount, surcharge, net());
+    }
+  }
+
+  private static Total total(
+      BigDecimal products, BigDecimal discount, BigDecimal surcharge, BigDecimal net) {
     ICMSTot tot = new ICMSTot();
     tot.setVBC(ZERO);
     tot.setVICMS(ZERO);
@@ -491,17 +518,17 @@ public class NfceXmlBuilder {
     tot.setVST(ZERO);
     tot.setVFCPST(ZERO);
     tot.setVFCPSTRet(ZERO);
-    tot.setVProd(decimal(total, 2));
+    tot.setVProd(decimal(products, 2));
     tot.setVFrete(ZERO);
     tot.setVSeg(ZERO);
-    tot.setVDesc(ZERO);
+    tot.setVDesc(decimal(discount, 2));
     tot.setVII(ZERO);
     tot.setVIPI(ZERO);
     tot.setVIPIDevol(ZERO);
     tot.setVPIS(ZERO);
     tot.setVCOFINS(ZERO);
-    tot.setVOutro(ZERO);
-    tot.setVNF(decimal(total, 2));
+    tot.setVOutro(decimal(surcharge, 2));
+    tot.setVNF(decimal(net, 2));
     Total result = new Total();
     result.setICMSTot(tot);
     return result;

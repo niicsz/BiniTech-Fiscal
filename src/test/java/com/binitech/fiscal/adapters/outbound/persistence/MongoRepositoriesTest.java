@@ -72,7 +72,9 @@ class MongoRepositoriesTest {
                     "UN",
                     new BigDecimal("2"),
                     new BigDecimal("5.50"),
-                    new BigDecimal("11.00"))),
+                    new BigDecimal("11.00"),
+                    null,
+                    null)),
             List.of(new SaleSnapshot.Payment("PIX", new BigDecimal("11.00")))));
     document.setTotal(new BigDecimal("11.00"));
     return document;
