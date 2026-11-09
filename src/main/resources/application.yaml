@@ -4,10 +4,9 @@ spring:
   threads:
     virtual:
       enabled: true
-  data:
-    mongodb:
-      uri: ${FISCAL_MONGODB_URI}
-      database: ${FISCAL_MONGODB_DATABASE:binitech_fiscal}
+  mongodb:
+    uri: ${FISCAL_MONGODB_URI}
+    database: ${FISCAL_MONGODB_DATABASE:binitech_fiscal}
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
