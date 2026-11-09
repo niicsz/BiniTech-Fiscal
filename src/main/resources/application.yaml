@@ -7,6 +7,10 @@ spring:
   mongodb:
     uri: ${FISCAL_MONGODB_URI}
     database: ${FISCAL_MONGODB_DATABASE:binitech_fiscal}
+  data:
+    mongodb:
+      representation:
+        big-decimal: string
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
