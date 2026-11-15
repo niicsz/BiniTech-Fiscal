@@ -51,7 +51,7 @@ import org.springframework.web.client.RestClient;
 public class BeanConfiguration {
   private static final java.util.regex.Pattern PRIVATE_HTTP =
       java.util.regex.Pattern.compile(
-          "http://(localhost|127\\.0\\.0\\.1|host\\.docker\\.internal|[A-Za-z0-9-]+|[A-Za-z0-9.-]+\\.railway\\.internal)(:\\d+)?(/.*)?");
+          "http://(127\\.0\\.0\\.1|host\\.docker\\.internal|[A-Za-z0-9-]+|[A-Za-z0-9.-]+\\.railway\\.internal)(:\\d+)?(/.*)?");
 
   @Bean
   Clock clock() {
