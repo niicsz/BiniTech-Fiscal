@@ -49,6 +49,9 @@ import org.springframework.web.client.RestClient;
 
 @Configuration
 public class BeanConfiguration {
+  private static final java.util.regex.Pattern PRIVATE_HTTP =
+      java.util.regex.Pattern.compile(
+          "http://(localhost|127\\.0\\.0\\.1|host\\.docker\\.internal|[A-Za-z0-9-]+|[A-Za-z0-9.-]+\\.railway\\.internal)(:\\d+)?(/.*)?");
 
   @Bean
   Clock clock() {
@@ -227,7 +230,7 @@ public class BeanConfiguration {
   }
 
   private static RestClient client(String url, Duration connectTimeout, Duration readTimeout) {
-    if (url == null || !url.matches("https?://.+")) {
+    if (url == null || !(url.matches("https://.+") || PRIVATE_HTTP.matcher(url).matches())) {
       throw new IllegalArgumentException("URL de serviço inválida: " + url);
     }
     SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
