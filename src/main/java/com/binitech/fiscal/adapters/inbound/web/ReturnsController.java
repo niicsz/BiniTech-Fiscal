@@ -6,6 +6,7 @@ import com.binitech.fiscal.application.ports.inbound.ReturnUseCase;
 import java.util.List;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,10 @@ public class ReturnsController implements ReturnsApi {
     return ResponseEntity.ok()
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
-            "inline; filename=\"nfe-devolucao-" + returnId + ".pdf\"")
+            ContentDisposition.inline()
+                .filename("nfe-devolucao-" + DownloadName.safe(returnId) + ".pdf")
+                .build()
+                .toString())
         .contentType(MediaType.APPLICATION_PDF)
         .body(new ByteArrayResource(pdf));
   }

@@ -7,6 +7,7 @@ import com.binitech.fiscal.adapters.inbound.web.generated.model.NfceDTO;
 import com.binitech.fiscal.application.ports.inbound.NfceUseCase;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -52,7 +53,12 @@ public class NfceController implements NfceApi {
   public ResponseEntity<Resource> downloadDanfe(String saleId) {
     byte[] pdf = nfce.danfe(CurrentSession.identity().tenantId(), saleId);
     return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"nfce-" + saleId + ".pdf\"")
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            ContentDisposition.inline()
+                .filename("nfce-" + DownloadName.safe(saleId) + ".pdf")
+                .build()
+                .toString())
         .contentType(MediaType.APPLICATION_PDF)
         .body(new ByteArrayResource(pdf));
   }
